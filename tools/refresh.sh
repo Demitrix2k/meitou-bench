@@ -13,6 +13,8 @@ CSV="${1:-${MEITOU_CSV:-}}"
 REPO="${2:-${MEITOU_REPO:-}}"
 [ -n "$CSV" ] && [ -n "$REPO" ] || { echo "usage: $0 [--push] CSV REPO (or MEITOU_CSV / MEITOU_REPO)" >&2; exit 2; }
 cd "$(dirname "$0")/.."
+# Merged contributor PRs land on main: start from it, so the push is a fast-forward.
+if [ "$PUSH" = 1 ]; then git pull -q --rebase; fi
 DEST=data/results/rtx3070-laptop-linux/daily-bench.csv
 cp "$CSV" "$DEST"
 if ! python3 tools/generate.py --repo "$REPO" --append-targets; then
