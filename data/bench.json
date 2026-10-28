@@ -1,0 +1,999 @@
+{
+ "repo_url": "https://github.com/VlcekM/MeitouClient",
+ "machines": {
+  "rtx3070-laptop-linux": "Laptop, NVIDIA RTX 3070 Laptop GPU, 14 GB RAM, Linux"
+ },
+ "series": [
+  {
+   "id": 1,
+   "start": "2026-10-27 09:52:28",
+   "label": "Series 1",
+   "description": "One run per scenario."
+  },
+  {
+   "id": 2,
+   "start": "2026-10-28 07:34:17",
+   "label": "Series 2",
+   "description": "Two runs per scenario, back-to-back. Run 1 may be cache-cold (disk cache, shader cache), run 2 warm."
+  }
+ ],
+ "scenarios": {
+  "play": {
+   "title": "Play benchmark",
+   "subtitle": "Camera: idle, orbit, zoom, pan (upstream's own --play-bench)",
+   "segments": "idle,orbit,zoom,pan"
+  },
+  "bases": {
+   "title": "Base switch",
+   "subtitle": "Four camera jumps between two bases",
+   "segments": "bases:idle,return"
+  }
+ },
+ "buckets": [
+  "Performance",
+  "Rendering/graphics",
+  "Gameplay & AI",
+  "UI",
+  "Launcher/build/platform",
+  "Tests",
+  "Docs & research",
+  "Other"
+ ],
+ "commits": [
+  {
+   "commit": "0ae1a5a7",
+   "commit_full": "0ae1a5a7a82ce1dfb1d898c62d7b38e313b73ada",
+   "date": "2026-10-27",
+   "time": "09:52:28",
+   "series": 1,
+   "changes": null,
+   "first_benchmark": true
+  },
+  {
+   "commit": "602c5df5",
+   "commit_full": "602c5df58d25146407bf8f7f9d84950e0f0ae1ad",
+   "date": "2026-10-27",
+   "time": "13:52:07",
+   "series": 1,
+   "changes": {
+    "since": "0ae1a5a7",
+    "commit_count": 52,
+    "bucket_counts": {
+     "Performance": 0,
+     "Rendering/graphics": 0,
+     "Gameplay & AI": 16,
+     "UI": 21,
+     "Launcher/build/platform": 0,
+     "Tests": 2,
+     "Docs & research": 13,
+     "Other": 0
+    },
+    "commits": [
+     {
+      "hash": "602c5df58d25146407bf8f7f9d84950e0f0ae1ad",
+      "short": "602c5df5",
+      "subject": "Tests: launcher schema read-back compares keys and kinds, not shown states other tests change",
+      "bucket": "Tests"
+     },
+     {
+      "hash": "d1d761afb51398cbf2964a830b8ef41a4129b27e",
+      "short": "d1d761af",
+      "subject": "Docs: options window facts, disabled slot flag source, owner tag clause marked Unknown",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "5861d8c91a4dc545b3e8f83cd83a2ddbdaf6d051",
+      "short": "5861d8c9",
+      "subject": "Faction rename: a taken name opens the original's Ok message box (Faction Name) instead of posting",
+      "bucket": "UI"
+     },
+     {
+      "hash": "5334aceb4f49b5ba909f5a985078aab4ba7a1984",
+      "short": "5334aceb",
+      "subject": "Docs: ammunition tooltip rows decoded (values Unknown); HUD stat breakdown tooltips already built",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "fd0078414ba991d5ffa27d691387ed0e5ad0a7b6",
+      "short": "fd007841",
+      "subject": "Docs: inventory slavery rows are bound; only the Disguise row lacks data",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "94fffaee3726472788453f9b4a0b2b4a5dc9b740",
+      "short": "94fffaee",
+      "subject": "Docs: world buildings act through their fixtures; town machines are the remaining gap",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "6db5fd1d1b1af2ba796bf5755ac3e5ed4fb8f247",
+      "short": "6db5fd1d",
+      "subject": "Stats window: Dodge, Athletics and Swimming Stats Affected numbers",
+      "bucket": "UI"
+     },
+     {
+      "hash": "89d83ffd9b19a1e0460c8a76c0f5343894148b47",
+      "short": "89d83ffd",
+      "subject": "Stats window: Strength, Toughness and Dexterity Stats Affected numbers; ranged State line gated by isInCombatMode(0, 1)",
+      "bucket": "UI"
+     },
+     {
+      "hash": "cff5d6aa0ea2ff051984ebc9aa9f883747fd443f",
+      "short": "cff5d6aa",
+      "subject": "Import window: a save older than 0.90.0 unticks and disables Reset, Buildings, Research and Dead NPCs",
+      "bucket": "UI"
+     },
+     {
+      "hash": "1944c8ad974f112b9640b6907d5c7e04758ef0eb",
+      "short": "1944c8ad",
+      "subject": "HUD: ranged State line (Aiming/Reloading [n/m], No Power!), bed Recovery rate; Throw out of home and Corpse Disposal verbs",
+      "bucket": "UI"
+     },
+     {
+      "hash": "5050eeef670b3826ffed615282d413bea2f031c0",
+      "short": "5050eeef",
+      "subject": "docs: shipping target of a save's platoon and the occupied food run's reading",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "3d13347a8301f4860ce8f0675c07f3af7bcd460e",
+      "short": "3d13347a",
+      "subject": "Slave selling chains the sold character (setChainedMode: SHACKLES, or SHACKLES-BODY for a no-shoes race)",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "d8d57901c9003fd34be82fcc53b84c58e84d0cb4",
+      "short": "d8d57901",
+      "subject": "docs: item-count cap setter uncalled, NPC town machines and road-try scope, carried-player unload hold decoded",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "009a2290931eeca6fbdf1eecc77df59ba25d9735",
+      "short": "009a2290",
+      "subject": "Off screen: a save's travelling platoon with slaves ships them to a camp too, read from the save",
+      "bucket": "UI"
+     },
+     {
+      "hash": "5ffcf0648f5834cda3d10fa744181c695c0721cb",
+      "short": "5ffcf064",
+      "subject": "Import: saves older than 0.90.0 drop the reset, buildings, research and dead-NPC ticks; docs: town-too-close and imported marker decoded",
+      "bucket": "UI"
+     },
+     {
+      "hash": "8ecc8288c500e8b004e8b244f33f68a379ecb845",
+      "short": "8ecc8288",
+      "subject": "Goal 243: food runs in a town where the player owns a house, and the occupied-town branch (0.2 inside walls, none outside a gated town)",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "b40acbd96d5af9c46ef91a58815e8ca292b24b2b",
+      "short": "b40acbd9",
+      "subject": "Player animals run their limb play, chase and downed-body race goals (278, 279, 233), ended by a player order; 278 desire per decompile",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "ffe5883bd72e3658dca0abbf8993be2d6df9334c",
+      "short": "ffe5883b",
+      "subject": "Locks: a cage or safe being dismantled stays registered and its lock counts as broken (owner slot 97, FUN_140297d60)",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "9c8e7a133d28ad1164f20a8ec61ebc80ce7bb025",
+      "short": "9c8e7a13",
+      "subject": "docs: furnace burn term is the generator load share (x1 for it); work hunger rate resets at Task_OperateMachine endAction",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "8de6261226a5ee5935eb30429c25a6f39dfdc447",
+      "short": "8de62612",
+      "subject": "Diplomatic Status entry: an NPC of class Diplomat (isDiplomaticStatus decoded), in the status line and its tooltip",
+      "bucket": "UI"
+     },
+     {
+      "hash": "f12fa716cfe5ca551a63428c5bd3464c9d33f1a8",
+      "short": "f12fa716",
+      "subject": "Item tooltips: a weather kind outside 1-5 prints -None as in the original; docs reworded",
+      "bucket": "UI"
+     },
+     {
+      "hash": "462c18c538447c7a45b1f4cc491f2a93468376cc",
+      "short": "462c18c5",
+      "subject": "Docs: stale MyGUI gaps (inline colour tags, EditBox bars built; no animated image set or ModeDrop used by Kenshi)",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "16f933263a7af4dd112b0fec12a2b25f38fff2df",
+      "short": "16f93326",
+      "subject": "Item tooltips: armour Weather Protections rows (kind names, amount %); docs: outside-trade prices already built",
+      "bucket": "UI"
+     },
+     {
+      "hash": "4490f916c159945f7dd1d6f7d37acde0c9b0c6bc",
+      "short": "4490f916",
+      "subject": "Overview AI tab: Follow Formation combo box (Random, Military, Caravan) saved as CAMERA formation; docs: stale overview gaps",
+      "bucket": "UI"
+     },
+     {
+      "hash": "f5413de81e3775e2d0f548c830adb68b8d375f99",
+      "short": "f5413de8",
+      "subject": "Shift on a storage's Inventory and on Man Turret adds the Hauling to and Turret guard jobs",
+      "bucket": "UI"
+     },
+     {
+      "hash": "86405d41cf2e8ff0b6c9ff42e75ceb9f9875b18c",
+      "short": "86405d41",
+      "subject": "HUD: health word by the original's choice (eaten, coma, crippled, bleeding...), State line words, crushed and stump bar layers",
+      "bucket": "UI"
+     },
+     {
+      "hash": "6dd526293cf0cfbcbeb6f30ac9a218220ebc0351",
+      "short": "6dd52629",
+      "subject": "Docs: stale HUD gaps (portrait scrolling, Tutorials window, For sale and public toggle built; behaviour slider dead)",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "a931532d1a9f8acfd6e36ca062dd321219b692bf",
+      "short": "a931532d",
+      "subject": "Docs: parity table no longer lists caret placing, faction rename, contracts or blueprint tooltips as missing",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "31fa329cb43bc4ff19392ddbe86325437c0d7efa",
+      "short": "31fa329c",
+      "subject": "Tests: drop the movement test that depended on the async path service's timing",
+      "bucket": "Tests"
+     },
+     {
+      "hash": "24a39a0eec1f76c7bc93ca5a30f16c76f402b900",
+      "short": "24a39a0e",
+      "subject": "Furnace: holds with output full while the output cannot take the load's iron; docs: bought town houses get no Dismantle (Verified)",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "9d09c9b019b8c8d0d0648d8357e108f5e0cb28a7",
+      "short": "9d09c9b0",
+      "subject": "Furnace window: the 12x7 grid drawn and droppable in its in1 slot, disabled while burning; Loot summary names slave states",
+      "bucket": "UI"
+     },
+     {
+      "hash": "5a31f580aebe01a6d20f467b922727b09cedd73d",
+      "short": "5a31f580",
+      "subject": "Panel dismantle applies while paused; docs: police class 2 test and internal buildings labelled",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "8f0ed8269b3117ae5d8db0b176f98810f647986f",
+      "short": "8f0ed826",
+      "subject": "NPC workers at town buildings take the functionality hunger rate, as Task_OperateMachine sets it",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "c262a65d733609f578e5759ffebc55f23a95811a",
+      "short": "c262a65d",
+      "subject": "Dismantle button: confirmed, the site goes at once with its refund and furniture (Building::confirmDismantle); town rule documented",
+      "bucket": "UI"
+     },
+     {
+      "hash": "0866db8666eba942393726b5b39745faecea9e0c",
+      "short": "0866db86",
+      "subject": "Item furnace: burns its 12x7 grid into Raw Iron by metal content, Active button and Total Metals row, grid saved as in1",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "409b5f7b9bf4504d02857965330ebf6eede3b5e4",
+      "short": "409b5f7b",
+      "subject": "Confiscation: police looters and goal 212 take one unit of each stolen item after 0.8 s, per Task_Loot_AI",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "f2c271b60b570b768dc2e9ca7dd1bb495fdccb90",
+      "short": "f2c271b6",
+      "subject": "Looting crime: NPC looters get a pending Looting on arrival and say events 32/33, per Task_Loot_AI",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "61d746c837624481f7b1d7e125d99ec10ae5bfdb",
+      "short": "61d746c8",
+      "subject": "Hunger tooltip: Current work row; docs: rain on farms is built",
+      "bucket": "UI"
+     },
+     {
+      "hash": "b7d1a633c6177fbc18eb367d2313c8d21d21e559",
+      "short": "b7d1a633",
+      "subject": "Shipping: kept slaver stand-ins travel off screen to their slave camp and wait there (TRAVEL_TARGET, unloaded func 5)",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "1a29d1faafbd1d3531b62d172227ca1996c8e304",
+      "short": "1a29d1fa",
+      "subject": "Docs: UniquePlatoon missions are dead in the original (special squads never spawn), not a gap",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "3038658b5dea43cb9f502048e3bf3930f0604d3b",
+      "short": "3038658b",
+      "subject": "Animals: player side fetches food from outpost stores (243), player animals fetch limbs (277); docs: no eggs in the original",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "98d94852a2c45ae32ece5c3a5a3dd1a77bd63ae5",
+      "short": "98d94852",
+      "subject": "Outposts: player outposts on the world map; docs: the original gives outposts no residents (Verified)",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "b0a8549fd6eb8bed1bf7cb0322487ea7896fbf09",
+      "short": "b0a8549f",
+      "subject": "Saves: turret loaded harpoons (current shots); dismissed and other town-less NPC squads saved as persistent homeless platoons",
+      "bucket": "UI"
+     },
+     {
+      "hash": "b71d11ffb5e79b4659fa02afd0a8d272e46ab7e5",
+      "short": "b71d11ff",
+      "subject": "Locks: player-built cages and safes get their own lock; player buildings' saved lock state restored; cutting doc fixed",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "d2eb2c80d341c3ffb92b612f0cc964411b2ae248",
+      "short": "d2eb2c80",
+      "subject": "Edit boxes: a click places the caret and a drag selects",
+      "bucket": "UI"
+     },
+     {
+      "hash": "2daaed4b39dc1b0a2f93ec8de04c2db4b9956b2c",
+      "short": "2daaed4b",
+      "subject": "Docs: the faithful screens' kept captions are the original's static labels",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "32e8e0280e7b9192bcbcc590f358a538eb477b0a",
+      "short": "32e8e028",
+      "subject": "Blueprints: tooltip state, Tech Level, requirements and unlock rows",
+      "bucket": "UI"
+     },
+     {
+      "hash": "efa064ed7ef4f42e9f1aa946d7d551ae60d81fd0",
+      "short": "efa064ed",
+      "subject": "Items: animals wear only items whose races list names them; docs: race limits and steal messages are built",
+      "bucket": "UI"
+     },
+     {
+      "hash": "f80497c868f702398344a320b1982f47f3b30f06",
+      "short": "f80497c8",
+      "subject": "Turrets: Height and Height bonus rows and the gun's Loaded bar with its reload rows",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "dc52e05e7a8e8ac9114a7c70172bfca4fba8ae3c",
+      "short": "dc52e05e",
+      "subject": "HUD: status lines in the bounty panel: Leader, War Leader, Kidnapped, Committing Crime! and Escaped Prisoner",
+      "bucket": "UI"
+     },
+     {
+      "hash": "89827e439c70fe4c22c0d3381bc2690abc091cd0",
+      "short": "89827e43",
+      "subject": "Trade: the illegal goods prompt over a trader; docs: stale gap entries for stealing, pickpocketing, rename and plants",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "16650d37698fc65948ad267244fe997f10eeda9b",
+      "short": "16650d37",
+      "subject": "Docs: time-left rounding and the stale tutorial box with no obedience job, both verified",
+      "bucket": "Docs & research"
+     }
+    ],
+    "merged_prs": []
+   },
+   "first_benchmark": false
+  },
+  {
+   "commit": "97282c6e",
+   "commit_full": "97282c6e5b9d23c247a3158311ffac9f5e542b08",
+   "date": "2026-10-27",
+   "time": "20:32:16",
+   "series": 1,
+   "changes": {
+    "since": "602c5df5",
+    "commit_count": 10,
+    "bucket_counts": {
+     "Performance": 0,
+     "Rendering/graphics": 0,
+     "Gameplay & AI": 3,
+     "UI": 5,
+     "Launcher/build/platform": 0,
+     "Tests": 1,
+     "Docs & research": 1,
+     "Other": 0
+    },
+    "commits": [
+     {
+      "hash": "97282c6e5b9d23c247a3158311ffac9f5e542b08",
+      "short": "97282c6e",
+      "subject": "First aid: an NPC medic carrying someone seeks no patient, so kidnappers keep their captive and cage it (raid test passes again)",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "bc905f4d7c265a47fc9ddc2c6fd2184d4818404d",
+      "short": "bc905f4d",
+      "subject": "Tests: .TECH.1 research, Dust Bandit faction races, Hub's own squads, Hub path pins regenerated (BuilderVersion 29)",
+      "bucket": "Tests"
+     },
+     {
+      "hash": "9094e1d240f52bfb3c9d9d1894d5c7f75f3bb39b",
+      "short": "9094e1d2",
+      "subject": "Inventory: closed slots also refuse trade, pick-up, loot, scavenge and storage equips (from #98 by Demitrix2k)",
+      "bucket": "UI"
+     },
+     {
+      "hash": "67d535cddc7e830c55b25715d771d0f1f8809a60",
+      "short": "67d535cd",
+      "subject": "Stats window: Strength's combat XP rate, the encumbrance factor x1.5 when the weapon outweighs 0.8x the run value",
+      "bucket": "UI"
+     },
+     {
+      "hash": "0e540cb0f85df7d9e02ce9162c53b395e936412d",
+      "short": "0e540cb0",
+      "subject": "Stats window: the other skills' Stats Affected values (work rates, aim, first aid, yield, smith qualities), decoded by disassembly",
+      "bucket": "UI"
+     },
+     {
+      "hash": "158a25094d5b5d9634136aaad7b90c84d44e245f",
+      "short": "158a2509",
+      "subject": "Owner tag: a stolen item handed to its owner's faction loses the mark; lift/drop owner rules decoded",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "f67f91db823ee86e27d2408627c2fe9470026737",
+      "short": "f67f91db",
+      "subject": "Inventory: race no hats / shirts / shoes and lost or replaced legs disable their slots, drawn red and refusing drops",
+      "bucket": "UI"
+     },
+     {
+      "hash": "7744762eded571accfdd77ceb616e7a9ac2c2aec",
+      "short": "7744762e",
+      "subject": "Item tooltips: ammunition Damage (quality x 0.01) and Shots rows, decoded by disassembly",
+      "bucket": "UI"
+     },
+     {
+      "hash": "b9508ee11bda98e33cb982fa6386040bd21e08c7",
+      "short": "b9508ee1",
+      "subject": "Disguises: uniform level, lookers seeing through it, the uniform faction in aggro, panel rows and health words; disguiseblown saved",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "d0da8b62d60c2b826a8de0fa3349862f35e395e6",
+      "short": "d0da8b62",
+      "subject": "Docs: the player may operate another faction's machine (no owner test); options window is Meitou's own by design",
+      "bucket": "Docs & research"
+     }
+    ],
+    "merged_prs": []
+   },
+   "first_benchmark": false
+  },
+  {
+   "commit": "c7e3a42f",
+   "commit_full": "c7e3a42f64a44df5ae51d24fde313e8eded89ada",
+   "date": "2026-10-28",
+   "time": "07:34:17",
+   "series": 2,
+   "changes": {
+    "since": "97282c6e",
+    "commit_count": 42,
+    "bucket_counts": {
+     "Performance": 1,
+     "Rendering/graphics": 7,
+     "Gameplay & AI": 11,
+     "UI": 8,
+     "Launcher/build/platform": 4,
+     "Tests": 0,
+     "Docs & research": 10,
+     "Other": 1
+    },
+    "commits": [
+     {
+      "hash": "c7e3a42f64a44df5ae51d24fde313e8eded89ada",
+      "short": "c7e3a42f",
+      "subject": "Roadmap updated by Claude Haiku 5.5 after ec927b5b",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "121d2af6436abac7bda4f47b27d8d05c78b7768a",
+      "short": "121d2af6",
+      "subject": "News 0.16.0: slavery aside",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "ae9edf956dbf32e233249c1581e15990fce4dc21",
+      "short": "ae9edf95",
+      "subject": "News: Meitou 0.16.0",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "5c0917e48e1c6b4089b3c73981b94cd17907f2e7",
+      "short": "5c0917e4",
+      "subject": "Changelog: v0.16.0",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "7b0f451d5acbd5786b12eba43ac8be90fb14e7bc",
+      "short": "7b0f451d",
+      "subject": "Changelog: v0.16.0",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "7261dd6fccfd2adcd10aa58791b61812e6713a96",
+      "short": "7261dd6f",
+      "subject": "Roadmap: changes since 11ba888f (#87, #93, #94, #96 fixed, #104 open; disguises, confiscation, outposts on map, Linux DLSS)",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "86ae196c56edba2f36e2dff4eb2aea8048a419a5",
+      "short": "86ae196c",
+      "subject": "ui-screens: the original's output-only machine window size is Unknown",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "a0600eef0b579f21bc2fbfdf3fc58ba05400169b",
+      "short": "a0600eef",
+      "subject": "Machine window: an output-only machine (mined rock) drops the empty input column and shrinks around its output",
+      "bucket": "UI"
+     },
+     {
+      "hash": "27a8093af4176ad1d97b4e5ad8429168ff391e29",
+      "short": "27a8093a",
+      "subject": "Research: blueprint rows scroll with the wheel; description rows at DatapanelGUI pitch; DESCRIPTION captions inset",
+      "bucket": "UI"
+     },
+     {
+      "hash": "763d72374ecc95dc53c684aa9cf53d1d8644c15c",
+      "short": "763d7237",
+      "subject": "Mining: a rock is reached inside its 1.2x bounds box or within use range of its centre, not use range past its edge",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "749947e2d792e969c18ed624b20cc90b392aad40",
+      "short": "749947e2",
+      "subject": "Sky arrival: a new game climbs at once, without sitting down, the hold or the hour's run",
+      "bucket": "Rendering/graphics"
+     },
+     {
+      "hash": "a07d0d884befdfa0fa31f3422e903735c689f4b7",
+      "short": "a07d0d88",
+      "subject": "Sky arrival: the title's wanderer sits down over 1.8 s, not 1.2",
+      "bucket": "Rendering/graphics"
+     },
+     {
+      "hash": "386b40ed82bc4adf2b432011f3dd31942d01a215",
+      "short": "386b40ed",
+      "subject": "Patrol town point: gate must be outside the walls, wall must have interior refs; homeless refill re-reads town zones each pass",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "f62db0be8dbc7f4a4f8f9c9de75ed33524ce35b7",
+      "short": "f62db0be",
+      "subject": "Ruins: floor kept only inside the destroyed boundary ring and joined at the doorway; walkers no longer walk through Hub ruin walls",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "b6554903ae9930e8561b39ef6da76fdabd4b812f",
+      "short": "b6554903",
+      "subject": "Homeless patrols aim 200 outside a town's first intact gate or wall and stop there; refill skips sectors a town stands in",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "dccaaa760c778136e8141cf7addfdcfd330d8a80",
+      "short": "dccaaa76",
+      "subject": "Default ground relief depth 30 cm (was 40)",
+      "bucket": "Rendering/graphics"
+     },
+     {
+      "hash": "64f3d99d844c27f89b2ba8308936d8dd4ec4fc8f",
+      "short": "64f3d99d",
+      "subject": "Rotation marker hidden in the free camera",
+      "bucket": "UI"
+     },
+     {
+      "hash": "f2bd10d45581d39df43f67218c0a4ee5156870d0",
+      "short": "f2bd10d4",
+      "subject": "Docs: outside-gates point is the first gate-with-door or wall in list order; mode 3 redraws only below-95 points for flagged races",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "202967f9e6b8f0265366b7b4c811647a8da5dafa",
+      "short": "202967f9",
+      "subject": "Docs: patrols aim 200 outside a town's gate and stop there; the 1250 is other modes' scatter; town sectors never spawn homeless squads",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "6287328184514223af9ba7c706a7ab2cc5f4fac5",
+      "short": "62873281",
+      "subject": "Shoppers only pick public shops, as the original's shop finders require",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "dd858a9c1a2a120dcddd9f0bc86688559e5b6663",
+      "short": "dd858a9c",
+      "subject": "Docs: original's shop finders take any public shop of the town, no faction test (Thieves Guild tower draws shoppers)",
+      "bucket": "Docs & research"
+     },
+     {
+      "hash": "13a8763d40ab560e1849cd25380037c89c01e646",
+      "short": "13a8763d",
+      "subject": "Followers path up to a leader on another storey instead of standing under it (Dust Bandits under their boss on the Hub Storm House roof)",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "586b83ed0d7e77d91a778ef939404d14f9da3811",
+      "short": "586b83ed",
+      "subject": "Launcher first-start dialog asks Launch as Kenshi on Steam (Windows)",
+      "bucket": "Launcher/build/platform"
+     },
+     {
+      "hash": "121281fc7f15260672f2e62bd5d8039c0810eb9a",
+      "short": "121281fc",
+      "subject": "Sky arrival: hour run twice as long, eased in and out; 0.5 s hold; the title's wanderer sits down as the flight starts",
+      "bucket": "Rendering/graphics"
+     },
+     {
+      "hash": "072c1c8984d5f89514ad7a5cbae49020414e68bf",
+      "short": "072c1c89",
+      "subject": "Fixes setting Weak punch reach: ma badpunch's attack distance -4 reads as 4 (on by default)",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "7feecb6bede81b345a7eff2cd48546a0506b37e8",
+      "short": "7feecb6b",
+      "subject": "Fist blows take the FISTS item's multipliers: robots 0.6, bleed 0.05; robot races' own fists",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "01db927973a408242f3ec68bc43c1bc5d615dc73",
+      "short": "01db9279",
+      "subject": "Fists reach with the FISTS weapon's length (18), not 0: martial artists' swings no longer fall short of their targets",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "090b6350798d1db1017287f025144cdc88a51603",
+      "short": "090b6350",
+      "subject": "Faction info panel: DatapanelGUI top inset; no Active Contracts heading (the contracts clear the panel first)",
+      "bucket": "UI"
+     },
+     {
+      "hash": "6eb79afa6df650b6b1440e0f516543cdd4425cf6",
+      "short": "6eb79afa",
+      "subject": "Overview: ItemBox bars only on overflow, tab captions, faction rows in the client, research tab rows/description/title as the base game",
+      "bucket": "UI"
+     },
+     {
+      "hash": "e06f322cc5bf24476aaefab6140258cd2571e3af",
+      "short": "e06f322c",
+      "subject": "Tutorials: panel lines keep their clip when moved down (were clipped away) and fit the list's width",
+      "bucket": "UI"
+     },
+     {
+      "hash": "82104b0e0ed259380614c253d53bb7f5648f5460",
+      "short": "82104b0e",
+      "subject": "Debris push constants on std430 offsets: vec3s start on 16 bytes, so bolts, gibs and limbs read their texture flag again",
+      "bucket": "Rendering/graphics"
+     },
+     {
+      "hash": "a7a85885226a53991bacb324bc5629d2b059112f",
+      "short": "a7a85885",
+      "subject": "Inventory: item tooltips keyed per character, so the loot window no longer overwrites the player's",
+      "bucket": "UI"
+     },
+     {
+      "hash": "3d9ad4d15680d793aad4f933d341084f4acff059",
+      "short": "3d9ad4d1",
+      "subject": "Sky arrival: warm the destination up from the landing view under the black",
+      "bucket": "Rendering/graphics"
+     },
+     {
+      "hash": "16f00f709f3b1346c14f6efbc1df22144190660d",
+      "short": "16f00f70",
+      "subject": "Sky arrival: hour runs forward to the destination's, 1 s hold, ascent, fade from black, descent from 300 up orbiting the view",
+      "bucket": "Rendering/graphics"
+     },
+     {
+      "hash": "37e45a6b8ce33de2d980041e7a3407d628a786fc",
+      "short": "37e45a6b",
+      "subject": "#93: part maps hide body parts under worn hide parts; mod race editor limits and files resolve in Workshop folders",
+      "bucket": "Other"
+     },
+     {
+      "hash": "1f931c77c33b9b214ee9ed048c3459c90083811e",
+      "short": "1f931c77",
+      "subject": "Metal host: null-check the HUD before configuring tutorials (CS8602 broke the macOS nightly builds)",
+      "bucket": "Launcher/build/platform"
+     },
+     {
+      "hash": "cd57bb71c8a402456a2326ab030f92e4824c6f6e",
+      "short": "cd57bb71",
+      "subject": "Build: libmeitou_ngx.so as a wildcard so Windows builds without it",
+      "bucket": "Launcher/build/platform"
+     },
+     {
+      "hash": "9fdd7d220222cf948f7d74aa088367f509fec047",
+      "short": "9fdd7d22",
+      "subject": "First aid: drop the unused full-scan FindPatient overload (no test used it)",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "5c3393c1d2a43930dfab9f8a2311f8ab002ee538",
+      "short": "5c3393c1",
+      "subject": "Factions met: empty known list loads setup + explored owners, crowd count stops at 40, sight range documented, sight and inspect tests",
+      "bucket": "Gameplay & AI"
+     },
+     {
+      "hash": "6e5b85524df0b8c9667c9e8f187ea3e091c10087",
+      "short": "6e5b8552",
+      "subject": "Faction tab lists only the factions the player has met",
+      "bucket": "UI"
+     },
+     {
+      "hash": "89157536bed39d1a69920c82346d50c58fcb3a54",
+      "short": "89157536",
+      "subject": "First aid: patient search tests range first, uses the spatial grid and scans once per sweep",
+      "bucket": "Performance"
+     },
+     {
+      "hash": "50e6fda5073aa4e9496128860b7d6bda26d862e6",
+      "short": "50e6fda5",
+      "subject": "Linux: DLSS through NVIDIA's NGX client library",
+      "bucket": "Launcher/build/platform"
+     }
+    ],
+    "merged_prs": [
+     {
+      "number": 106,
+      "title": "",
+      "author": "",
+      "hash": "ec927b5b76fbeb26ea1a7ef9e4cbcfd54fbbf564"
+     },
+     {
+      "number": 99,
+      "title": "Linux: DLSS through NVIDIA's NGX client library",
+      "author": "asc3ns10n",
+      "hash": "9258a06a4020ff4a9ca28d46b6a4927234790179"
+     },
+     {
+      "number": 102,
+      "title": "First aid patient search tests range first, uses the spatial grid and scans once per sweep",
+      "author": "Demitrix2k",
+      "hash": "22eef941d911ab745100262c4d2b4394c81bac42"
+     },
+     {
+      "number": 100,
+      "title": "Faction tab lists only the factions the player has met",
+      "author": "asc3ns10n",
+      "hash": "55f4d85f538f07015f9401d8aa5bf7f7114c71cf"
+     }
+    ]
+   },
+   "first_benchmark": false
+  }
+ ],
+ "rows": [
+  {
+   "date": "2026-10-27",
+   "time": "09:52:28",
+   "commit": "0ae1a5a7",
+   "commit_full": "0ae1a5a7a82ce1dfb1d898c62d7b38e313b73ada",
+   "scenario": "play",
+   "run": 1,
+   "metrics": {
+    "over33_pct": 6.8,
+    "p50_ms": 16.9,
+    "p99_ms": 105.5,
+    "max_ms": 292.9,
+    "over100_count": 24,
+    "slow_world_p99_ms": 70.7,
+    "slow_world_max_ms": 226.5
+   },
+   "gpu": "NVIDIA GeForce RTX 3070 Laptop GPU",
+   "driver": "615.78.08",
+   "machine": "rtx3070-laptop-linux",
+   "series": 1,
+   "note": "first run"
+  },
+  {
+   "date": "2026-10-27",
+   "time": "09:54:27",
+   "commit": "0ae1a5a7",
+   "commit_full": "0ae1a5a7a82ce1dfb1d898c62d7b38e313b73ada",
+   "scenario": "bases",
+   "run": 1,
+   "metrics": {
+    "over33_pct": 25.3,
+    "p50_ms": 25.6,
+    "p99_ms": 199.4,
+    "max_ms": 766,
+    "over100_count": 35,
+    "slow_world_p99_ms": 88.3,
+    "slow_world_max_ms": 138.9
+   },
+   "gpu": "NVIDIA GeForce RTX 3070 Laptop GPU",
+   "driver": "615.78.08",
+   "machine": "rtx3070-laptop-linux",
+   "series": 1,
+   "note": "first run"
+  },
+  {
+   "date": "2026-10-27",
+   "time": "13:52:07",
+   "commit": "602c5df5",
+   "commit_full": "602c5df58d25146407bf8f7f9d84950e0f0ae1ad",
+   "scenario": "play",
+   "run": 1,
+   "metrics": {
+    "over33_pct": 6.6,
+    "p50_ms": 17.1,
+    "p99_ms": 104.9,
+    "max_ms": 471.2,
+    "over100_count": 27,
+    "slow_world_p99_ms": 75.2,
+    "slow_world_max_ms": 291
+   },
+   "gpu": "NVIDIA GeForce RTX 3070 Laptop GPU",
+   "driver": "615.78.08",
+   "machine": "rtx3070-laptop-linux",
+   "series": 1,
+   "note": ""
+  },
+  {
+   "date": "2026-10-27",
+   "time": "13:53:35",
+   "commit": "602c5df5",
+   "commit_full": "602c5df58d25146407bf8f7f9d84950e0f0ae1ad",
+   "scenario": "bases",
+   "run": 1,
+   "metrics": {
+    "over33_pct": 25.5,
+    "p50_ms": 26.4,
+    "p99_ms": 157.3,
+    "max_ms": 358.5,
+    "over100_count": 40,
+    "slow_world_p99_ms": 102.5,
+    "slow_world_max_ms": 244.9
+   },
+   "gpu": "NVIDIA GeForce RTX 3070 Laptop GPU",
+   "driver": "615.78.08",
+   "machine": "rtx3070-laptop-linux",
+   "series": 1,
+   "note": ""
+  },
+  {
+   "date": "2026-10-27",
+   "time": "20:32:16",
+   "commit": "97282c6e",
+   "commit_full": "97282c6e5b9d23c247a3158311ffac9f5e542b08",
+   "scenario": "play",
+   "run": 1,
+   "metrics": {
+    "over33_pct": 5.8,
+    "p50_ms": 17.3,
+    "p99_ms": 90.1,
+    "max_ms": 241.6,
+    "over100_count": 16,
+    "slow_world_p99_ms": 70.7,
+    "slow_world_max_ms": 154.3
+   },
+   "gpu": "NVIDIA GeForce RTX 3070 Laptop GPU",
+   "driver": "615.78.08",
+   "machine": "rtx3070-laptop-linux",
+   "series": 1,
+   "note": ""
+  },
+  {
+   "date": "2026-10-27",
+   "time": "20:34:26",
+   "commit": "97282c6e",
+   "commit_full": "97282c6e5b9d23c247a3158311ffac9f5e542b08",
+   "scenario": "bases",
+   "run": 1,
+   "metrics": {
+    "over33_pct": 22.9,
+    "p50_ms": 24.4,
+    "p99_ms": 129.9,
+    "max_ms": 381.4,
+    "over100_count": 42,
+    "slow_world_p99_ms": 98,
+    "slow_world_max_ms": 244.3
+   },
+   "gpu": "NVIDIA GeForce RTX 3070 Laptop GPU",
+   "driver": "615.78.08",
+   "machine": "rtx3070-laptop-linux",
+   "series": 1,
+   "note": ""
+  },
+  {
+   "date": "2026-10-28",
+   "time": "07:34:17",
+   "commit": "c7e3a42f",
+   "commit_full": "c7e3a42f64a44df5ae51d24fde313e8eded89ada",
+   "scenario": "play",
+   "run": 1,
+   "metrics": {
+    "over33_pct": 6.2,
+    "p50_ms": 17.9,
+    "p99_ms": 128.2,
+    "max_ms": 300.7,
+    "over100_count": 37,
+    "slow_world_p99_ms": 29.6,
+    "slow_world_max_ms": 85.7
+   },
+   "gpu": "NVIDIA GeForce RTX 3070 Laptop GPU",
+   "driver": "615.78.08",
+   "machine": "rtx3070-laptop-linux",
+   "series": 2,
+   "note": ""
+  },
+  {
+   "date": "2026-10-28",
+   "time": "07:35:45",
+   "commit": "c7e3a42f",
+   "commit_full": "c7e3a42f64a44df5ae51d24fde313e8eded89ada",
+   "scenario": "bases",
+   "run": 1,
+   "metrics": {
+    "over33_pct": 11.5,
+    "p50_ms": 20.7,
+    "p99_ms": 106.4,
+    "max_ms": 292.5,
+    "over100_count": 11,
+    "slow_world_p99_ms": 24.7,
+    "slow_world_max_ms": 111.1
+   },
+   "gpu": "NVIDIA GeForce RTX 3070 Laptop GPU",
+   "driver": "615.78.08",
+   "machine": "rtx3070-laptop-linux",
+   "series": 2,
+   "note": ""
+  },
+  {
+   "date": "2026-10-28",
+   "time": "07:41:08",
+   "commit": "c7e3a42f",
+   "commit_full": "c7e3a42f64a44df5ae51d24fde313e8eded89ada",
+   "scenario": "play",
+   "run": 2,
+   "metrics": {
+    "over33_pct": 2.7,
+    "p50_ms": 17.3,
+    "p99_ms": 39.1,
+    "max_ms": 73,
+    "over100_count": 0,
+    "slow_world_p99_ms": 15.6,
+    "slow_world_max_ms": 37.3
+   },
+   "gpu": "NVIDIA GeForce RTX 3070 Laptop GPU",
+   "driver": "615.78.08",
+   "machine": "rtx3070-laptop-linux",
+   "series": 2,
+   "note": ""
+  },
+  {
+   "date": "2026-10-28",
+   "time": "07:42:37",
+   "commit": "c7e3a42f",
+   "commit_full": "c7e3a42f64a44df5ae51d24fde313e8eded89ada",
+   "scenario": "bases",
+   "run": 2,
+   "metrics": {
+    "over33_pct": 9.7,
+    "p50_ms": 20.3,
+    "p99_ms": 62.4,
+    "max_ms": 126.7,
+    "over100_count": 2,
+    "slow_world_p99_ms": 17.1,
+    "slow_world_max_ms": 28.7
+   },
+   "gpu": "NVIDIA GeForce RTX 3070 Laptop GPU",
+   "driver": "615.78.08",
+   "machine": "rtx3070-laptop-linux",
+   "series": 2,
+   "note": ""
+  }
+ ]
+}
