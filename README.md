@@ -1,5 +1,7 @@
 # Meitou benchmarks
 
+**Website: https://demitrix2k.github.io/meitou-bench/** (charts per commit, machines, and what changed upstream between benchmarks)
+
 The public home for Meitou benchmarks from several machines. Meitou is a C#/.NET Vulkan reimplementation of the game
 Kenshi ([upstream](https://github.com/VlcekM/MeitouClient)). This repository holds three things:
 
