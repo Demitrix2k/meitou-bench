@@ -6,7 +6,7 @@ Results from other machines are welcome. They are added by pull request and appe
 
 `targets.json` lists the benchmark targets, oldest first. **The latest entry is the current standard**: run that commit. Comparing machines only makes sense on the same code.
 
-- **Run the latest target.** The dev kit builds it by default: `update-and-build.sh` reads `targets.json` (from the public repository, or the copy next to the kit when offline) and builds that commit.
+- **Run the latest target.** The dev kit builds it by default: `build.py` reads `targets.json` (from the public repository, or the copy next to the kit when offline) and builds that commit.
 - **Release targets** (`kind: release`, for example `v0.16.0`) are anchor points: every machine should run each release at least once, so any two machines have a commit in common.
 - **Daily targets** are added by the maintainer after each upstream update (`tools/refresh.sh`). You do not need to chase every one; the latest is enough.
 - A commit that differs from a target only in `docs/`, `site/`, `tests/`, `.github/`, `tools/` or `*.md` is **code-identical** and counts for that target.
@@ -14,16 +14,16 @@ Results from other machines are welcome. They are added by pull request and appe
 
 ## 1. Run the kit
 
-Follow `kit/README.md`: get the benchmark save, build the current standard, run `bench.sh`.
+Follow `kit/README.md` (Linux, Windows and macOS; Python 3.10+, nothing else to install): get the benchmark save, build the current standard, run `bench.py`.
 
 ```
 cd kit
-export KENSHI_PATH=... MACHINE=<machine-id> WHO=<your GitHub handle>
-./update-and-build.sh native
-./bench.sh
+export KENSHI_PATH=... MACHINE=<machine-id> WHO=<your GitHub handle>   # Windows PowerShell: $env:KENSHI_PATH="..."
+python3 build.py
+python3 bench.py
 ```
 
-Pick the machine id once and keep it: lowercase letters, digits and hyphens, 3 to 48 characters, for example `ryzen5600-rx6800-linux`. It is your folder name and the `MACHINE` value. Use a different id for a Proton setup than for a native one on the same computer (a machine's rows must all be one platform).
+Pick the machine id once and keep it: lowercase letters, digits and hyphens, 3 to 48 characters, for example `ryzen5600-rx6800-linux`. It is your folder name and the `MACHINE` value. A machine's rows must all be one platform (`native` = Linux native, `proton` = Windows build under Proton on Linux, `windows`, `macos`): use a different id for a Proton setup than for a native one on the same computer, e.g. `<id>-proton`, and for a second operating system on the same hardware, e.g. `<id>-windows`. Windows and macOS runs are new and untested; if something does not work, say so in the PR or an issue.
 
 The result is `kit/results/<date>-<commit>-<machine>/results.csv` (and `report.md`).
 
@@ -48,6 +48,8 @@ Fork this repository and add, in your fork:
    }
    ```
 
+   Optional `"os_family": "linux" | "windows" | "macos"`: the page derives it from the platform of your results; if you give it, it must agree. `os` is free text (distribution, Windows edition, macOS version).
+
    `id` must equal the file name without `.json`. `resolution` is the size the benchmark rendered at (the `resolution` column of your `results.csv`).
 
 2. `data/results/<machine-id>/<date>-<commit>.csv`: your `results.csv`, unchanged. `<date>` is the day of the run (`YYYY-MM-DD`), `<commit>` the 8-digit commit from the CSV. The `machine` column, if present, must equal your machine id.
@@ -63,10 +65,11 @@ On every pull request the check (`tools/generate.py --check`, against upstream `
 - the PR changes anything outside `data/machines/` and `data/results/` (the repository owner is exempt);
 - a machine file is missing, misnamed or lacks a required field, or a results folder has no machine file;
 - a CSV is missing columns (the 19 columns of the kit; the 6 machine columns are optional) or a value is not a number;
+- `platform` is not `native`, `proton`, `windows` or `macos`;
 - `segments` is not one of the two known scenarios, `save` is not `bench-bases-2026-10-27`, or `data` is not `gog` (clean, unmodded data);
 - the `machine` column does not match your folder;
 - the commit does not exist upstream or is not on upstream `master`;
-- a row is duplicated, there are more than two runs of a scenario for one commit and machine, or one machine mixes native and Proton rows.
+- a row is duplicated, there are more than two runs of a scenario for one commit and machine, or one machine mixes platforms (native, proton, windows, macos).
 
 Off-target commits do not fail the check; they are only flagged.
 
@@ -74,6 +77,6 @@ Off-target commits do not fail the check; they are only flagged.
 
 - Your GitHub handle is shown on the site, linked to your profile, with your hardware and resolution. Do not submit if you do not want that.
 - Do not edit other people's files. Corrections to your own data are fine (a new commit in your PR).
-- Do not submit modded runs or runs with changed settings. The kit refuses a changed `meitou.user.json` and non-clean data; if something was odd (a different window size, background load, a crash), say so in the `note` column or the report instead of changing the numbers.
+- Do not submit modded runs or runs with changed settings. The kit refuses a changed `meitou.user.json` and a save that differs from the checksums; if something was odd (a different window size, background load, a crash), say so in the `note` column or the report instead of changing the numbers.
 - Only the `bench-bases-2026-10-27` save is accepted. Numbers from different save files or settings cannot be compared.
 - Run 1 may be cache-cold; that is normal and both runs are kept.

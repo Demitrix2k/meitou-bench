@@ -1,13 +1,13 @@
 # results.csv format
 
-`bench.sh` writes one row per successful run to `results.csv` in its output folder: 2 runs of the play benchmark and 2 of the base-switch scenario give 4 rows. The first 19 columns are exactly those of the maintainers' `daily-bench.csv`, in the same order and with the same meaning, so rows can be appended to it; the machine columns come last.
+`bench.py` writes one row per successful run to `results.csv` in its output folder: 2 runs of the play benchmark and 2 of the base-switch scenario give 4 rows. The first 19 columns are exactly those of the maintainers' `daily-bench.csv`, in the same order and with the same meaning, so rows can be appended to it; the machine columns come last.
 
 | column | meaning |
 |---|---|
 | date, time | start of the run (local time) |
 | build | build folder name, e.g. `Meitou-master-linux` |
 | commit | 8-digit source commit of the build (from `BUILT_FROM.txt`) |
-| platform | `native` (Linux build) or `proton` (Windows build under Proton) |
+| platform | `native` (the Linux build on Linux), `proton` (the Windows build under Proton on Linux), `windows` (Windows build on Windows) or `macos` (macOS build on a Mac, Vulkan through MoltenVK). One machine keeps one platform |
 | data | `gog` = clean unmodded Kenshi data (our name for it, whichever store you bought it in) |
 | save | save folder name, `bench-bases-2026-10-27` |
 | segments | `idle,orbit,zoom,pan` (play benchmark) or `bases:idle,return` (base switch) |
@@ -22,8 +22,8 @@
 | machine | short label of the machine (`MACHINE`) |
 | cpu | CPU model |
 | ram_gb | installed RAM, GB |
-| os | distribution / OS name |
-| kernel | kernel release |
+| os | distribution / OS name (`PRETTY_NAME`, Windows caption, macOS name and version) |
+| kernel | kernel release (Linux, macOS: Darwin), Windows version number |
 | resolution | resolution the benchmark rendered at (the game window), from `bench/summary.md`; depends on your screen size and affects every number |
 
 The `settle` segment is always run first and left out of the numbers. Each folder under `play/` and `bases/` also keeps the game's per-frame `bench/frames.csv`, its `summary.md`, the MangoHud log and `game.log`.

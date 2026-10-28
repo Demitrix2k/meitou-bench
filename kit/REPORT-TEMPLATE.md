@@ -1,6 +1,6 @@
 # Meitou daily benchmark report
 
-`bench.sh` fills the fields in braces from the machine and the run folders and writes the result as `report.md`. Fill in what it could not know and the two human parts at the end.
+`bench.py` fills the fields in braces from the machine and the run folders and writes the result as `report.md`. Fill in what it could not know and the two human parts at the end.
 
 - Who: {{WHO}}
 - Date: {{DATE}}

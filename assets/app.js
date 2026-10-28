@@ -40,6 +40,10 @@
   }
   function short(c) { return c.slice(0, 8); }
   function mname(m) { return m.name || m.id; }
+  // Platform of a machine: native = the Linux build on Linux, proton = the Windows build under Proton on Linux.
+  var PLAT = { native: "Linux native", proton: "Linux Proton", windows: "Windows", macos: "macOS" };
+  function platLabel(m) { return PLAT[m.platform] || m.platform; }
+  function platChip(m) { return '<span class="chip plat plat-' + esc(m.platform) + '" title="platform of this machine\'s runs">' + esc(platLabel(m)) + "</span>"; }
   function mcolor(m) { return "var(--m" + (D.machines.indexOf(m) % 8) + ")"; }
   function mdot(m) { return '<span class="dot" style="background:' + mcolor(m) + '"></span>'; }
   function handleLink(m) {
@@ -310,19 +314,19 @@
     var p = el("p", { class: "muted" });
     p.innerHTML = "Latest benchmark target run by more than one machine: " +
       '<a class="sha" href="' + REPO + "/commit/" + esc(found.t.commit_full) + '">' + esc(found.t.commit) + "</a> (" + esc(found.t.label) + "), " + esc(found.t.date) +
-      ". A commit that is code-identical to the target counts for it. Different GPU, CPU or resolution change every number, so read this as a hardware comparison, not a code comparison.";
+      ". A commit that is code-identical to the target counts for it. Different GPU, CPU, resolution or platform change every number, so read this as a hardware comparison, not a code comparison.";
     host.appendChild(p);
     Object.keys(D.scenarios).forEach(function (sid) {
       var any = found.ms.some(function (m) { return targetRows(m, found.t, sid).length; });
       if (!any) return;
       var html = "<h3>" + esc(D.scenarios[sid].title) + "</h3>" +
-        '<div class="tablewrap"><table><thead><tr><th>Machine</th><th>GPU</th><th>Resolution</th><th>Commit</th><th>Runs shown</th>';
+        '<div class="tablewrap"><table><thead><tr><th>Machine</th><th>Platform</th><th>GPU</th><th>Resolution</th><th>Commit</th><th>Runs shown</th>';
       ALLM.forEach(function (mt) { html += "<th>" + esc(mt.label) + "</th>"; });
       html += "</tr></thead><tbody>";
       found.ms.forEach(function (m) {
         var all = targetRows(m, found.t, sid), rs = pick(all);
         if (!rs.length) return;
-        html += "<tr><td>" + mdot(m) + esc(mname(m)) + " " + handleLink(m) + "</td><td>" + esc(m.gpu) + "</td><td>" + esc(m.resolution) +
+        html += "<tr><td>" + mdot(m) + esc(mname(m)) + " " + handleLink(m) + "</td><td>" + platChip(m) + "</td><td>" + esc(m.gpu) + "</td><td>" + esc(m.resolution) +
           "</td><td><span class=\"sha\">" + esc(all[0].commit) + "</span></td><td>" + rs.map(function (r) { return "run " + r.run; }).join(", ") + "</td>";
         ALLM.forEach(function (mt) {
           html += "<td>" + rs.map(function (r) { return fmt(r.metrics[mt.key]); }).join(" / ") + "</td>";
@@ -346,7 +350,7 @@
     });
     html += "</tr></thead><tbody>";
     D.machines.forEach(function (m) {
-      html += "<tr><td>" + mdot(m) + esc(mname(m)) + "</td>";
+      html += "<tr><td>" + mdot(m) + esc(mname(m)) + " " + platChip(m) + "</td>";
       D.targets.forEach(function (t) {
         var has = t.machines.indexOf(m.id) >= 0;
         var variant = has && !D.rows.some(function (r) { return r.machine === m.id && r.commit_full === t.commit_full; });
@@ -365,7 +369,7 @@
     var cur = currentTarget();
     document.getElementById("standard").innerHTML =
       "<b>Current standard:</b> <a class=\"sha\" href=\"" + REPO + "/commit/" + esc(cur.commit_full) + "\">" + esc(cur.commit) + "</a> (" + esc(cur.label) + ", " + esc(cur.date) + "). " +
-      "Everyone benchmarks the same commits so results can be compared. To add your machine: <code>cd kit &amp;&amp; ./update-and-build.sh native &amp;&amp; MACHINE=&lt;id&gt; ./bench.sh</code> " +
+      "Everyone benchmarks the same commits so results can be compared. To add your machine: <code>cd kit &amp;&amp; python3 build.py &amp;&amp; python3 bench.py --machine &lt;id&gt;</code> (Linux, Windows, macOS) " +
       "(builds the current standard by default; see CONTRIBUTING.md).";
   }
 
@@ -464,8 +468,8 @@
       card.appendChild(cb);
       var body = el("div", { class: "mbody" });
       body.innerHTML =
-        '<div class="mtitle">' + mdot(m) + "<b>" + esc(mname(m)) + "</b> " + handleLink(m) + (m.maintainer ? ' <span class="chip">maintainer</span>' : "") + "</div>" +
-        '<div class="muted">' + esc(m.cpu) + "; " + esc(m.gpu) + "; " + esc(String(m.ram_gb)) + " GB RAM; " + esc(m.os) + " (" + esc(m.platform) + ")</div>" +
+        '<div class="mtitle">' + mdot(m) + "<b>" + esc(mname(m)) + "</b> " + handleLink(m) + " " + platChip(m) + (m.maintainer ? ' <span class="chip">maintainer</span>' : "") + "</div>" +
+        '<div class="muted">' + esc(m.cpu) + "; " + esc(m.gpu) + "; " + esc(String(m.ram_gb)) + " GB RAM; " + esc(m.os) + "</div>" +
         "<div>Renders at <b>" + esc(m.resolution) + "</b> - " + m.commit_count + " benchmarked commit" + (m.commit_count === 1 ? "" : "s") +
         ", last " + esc(m.last_date) + "</div>" +
         (m.notes ? '<div class="muted">' + esc(m.notes) + "</div>" : "");
@@ -514,11 +518,12 @@
     var sel = selectedMachines();
     host.hidden = true;
     if (sel.length < 2 || state.relative) return;
-    var res = {}, gpu = {};
-    sel.forEach(function (m) { res[m.resolution] = 1; gpu[m.gpu] = 1; });
+    var res = {}, gpu = {}, plat = {};
+    sel.forEach(function (m) { res[m.resolution] = 1; gpu[m.gpu] = 1; plat[m.platform] = 1; });
     var diff = [];
     if (Object.keys(gpu).length > 1) diff.push("GPUs");
     if (Object.keys(res).length > 1) diff.push("resolutions");
+    if (Object.keys(plat).length > 1) diff.push("platforms (" + Object.keys(plat).map(function (p) { return PLAT[p] || p; }).join(", ") + ": different operating system, graphics driver stack and build)");
     host.textContent = "Caution: absolute values of machines with different " + (diff.length ? diff.join(" and ") : "CPUs or drivers") +
       " are not comparable. A faster GPU at a lower resolution is not a code improvement. Use \"relative to own baseline\" to compare trends, or compare machines of the same hardware and resolution.";
     host.hidden = false;

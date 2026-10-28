@@ -3,7 +3,7 @@
 The public home for Meitou benchmarks from several machines. Meitou is a C#/.NET Vulkan reimplementation of the game
 Kenshi ([upstream](https://github.com/VlcekM/MeitouClient)). This repository holds three things:
 
-- `kit/`: the dev kit. Reproduces the fixed benchmark on your own machine (see `kit/README.md`).
+- `kit/`: the dev kit (Python 3.10+, Linux, Windows and macOS). Reproduces the fixed benchmark on your own machine (see `kit/README.md`). Linux native is the platform the maintainer measures on; Windows and macOS are supported by the kit but untested.
 - `data/`: results. `data/machines/<id>.json` describes a machine, `data/results/<id>/` holds its result CSVs.
   Contributors add their own files by pull request (see `CONTRIBUTING.md`).
 - the page: `index.html`, `assets/`, built from the data by `tools/generate.py`. It shows, per machine, trend charts per
@@ -24,11 +24,11 @@ the page, left out of comparisons between machines). The kit builds the latest t
 
 After each upstream `master` update, the maintainer runs one fixed benchmark (contributors run the same one with the kit):
 
-- native Linux build of upstream `master`
+- native Linux build of upstream `master` (the maintainer's platform; contributors may add `proton`, `windows` or `macos` machines, shown with a platform chip and never mixed in one machine)
 - clean, unmodded game data (GOG copy)
 - the same frozen save every run (two player bases; never played or saved over)
 - full graphics settings
-- MangoHud frame-time logging; frame metrics come from the game's bench frames
+- frame metrics come from the game's own bench frames (MangoHud is an optional extra log on Linux)
 - machine: described in `data/machines/<id>.json` (GPU, driver, CPU, RAM, OS and render resolution are recorded; the maintainer's is a laptop with an RTX 3070 Laptop GPU, 14 GB RAM, Linux, 2560x1406)
 
 Two scenarios: the play benchmark (upstream's own `--play-bench`, camera segments idle, orbit, zoom, pan) and a
@@ -40,7 +40,7 @@ Lower is better for all of them.
 
 ```
 targets.json                                   benchmark targets, oldest first
-data/machines/<machine-id>.json                id, github, name (optional), cpu, gpu, ram_gb, os, resolution, notes, added
+data/machines/<machine-id>.json                id, github, name (optional), cpu, gpu, ram_gb, os, resolution, notes, added, os_family (optional)
 data/results/<machine-id>/<date>-<commit>.csv  the kit's results.csv as written (19 columns, or 25 with machine columns)
 data/results/<machine-id>/<date>-<commit>.report.md   optional
 data/results/rtx3070-laptop-linux/daily-bench.csv     the maintainer's file (19 columns; machine comes from the folder)
@@ -48,7 +48,8 @@ data/results/rtx3070-laptop-linux/daily-bench.csv     the maintainer's file (19 
 
 `data/bench.json` is generated (by `tools/generate.py`, and in CI); it is gitignored and not committed. Its rows have: `date`,
 `time`, `commit`, `commit_full`, `scenario` (`play` or `bases`), `run`, `metrics`, `gpu`, `driver`, `machine`, `platform`,
-`target` (the target the commit counts for, or null), `series`, `note`.
+`target` (the target the commit counts for, or null), `series`, `note`. `platform` is `native` (Linux), `proton`, `windows` or `macos`; each
+machine entry carries `platform` and `os_family` (`linux`, `windows`, `macos`).
 
 Commits are ordered by upstream history (`git rev-list --topo-order origin/master`), not by date. A commit that is not on upstream
 `master` is rejected. "Changes between benchmarks" are computed between consecutive benchmarked commits across all machines.

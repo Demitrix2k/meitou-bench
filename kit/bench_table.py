@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Markdown tables from play-bench run folders (used by bench.sh in the dev kit; also runnable alone). Same maths as the maintainers' bench-compare-table.py.
+"""Markdown tables from play-bench run folders (used by bench.py in the dev kit; also runnable alone). Same maths as the maintainers' bench-compare-table.py.
 
-Usage: bench-table.py <folder>...
-       bench-table.py --history <csv> <out dir> <note> <gpu driver> <machine> <cpu> <ram_gb> <os> <kernel>   append one CSV row per successful run
-       bench-table.py --settings-diff <kit settings json> <build settings json>   print the keys of the first that differ in the second (the game adds keys of its own on start)
+Usage: bench_table.py <folder>...
+       bench_table.py --history <csv> <out dir> <note> <gpu driver> <machine> <cpu> <ram_gb> <os> <kernel>   append one CSV row per successful run
+       bench_table.py --settings-diff <kit settings json> <build settings json>   print the keys of the first that differ in the second (the game adds keys of its own on start)
   A folder is either a run folder (it holds bench/frames.csv) or a parent whose sub-folders are run folders.
   Run folders are named <case>-<n>-<build label> (e.g. native-steam-1-base, proton-gog-1-fix, native-gog-2-culprit; the older steam-2-fix, p-gog-1-base also work);
   the order of the builds in a table is the order in <out dir>/builds.txt (label, folder, commit; written by bench-compare.sh), else first seen;
   runs with the same <case> and build label are grouped and the median is taken over them.
-  A <case> containing the word proton (or the letter p as a word) is a Proton run, otherwise native;
+  A <case> containing the word proton (or the letter p as a word) is a Proton run, windows / macos a native Windows / macOS run, otherwise native (Linux);
   a <case> containing gog is the unmodded copy, otherwise modded (the Steam copy).
 
 Numbers come from bench/frames.csv, all rows except those of segment "settle":
@@ -29,7 +29,7 @@ def run_stats(folder):
     if not os.path.isfile(path):
         return None, 'no bench/frames.csv (run failed or not finished)'
     try:
-        rows = [r for r in csv.DictReader(open(path)) if r['segment'] != 'settle']
+        rows = [r for r in csv.DictReader(open(path, encoding='utf-8', newline='')) if r['segment'] != 'settle']
         f = [float(r['frame_ms']) for r in rows]
         sw = [float(r['sim_slow-world']) for r in rows]
     except (KeyError, ValueError) as e:
@@ -41,7 +41,7 @@ def run_stats(folder):
 
 def note_of(folder):
     p = os.path.join(folder, 'run.txt')
-    return open(p).read().strip().replace('\n', '; ') if os.path.isfile(p) else ''
+    return open(p, encoding='utf-8', errors='replace').read().strip().replace('\n', '; ') if os.path.isfile(p) else ''
 
 def is_run(path):
     return os.path.isdir(os.path.join(path, 'bench')) or os.path.isfile(os.path.join(path, 'run.txt')) or re.search(r'-(base|fix)$', os.path.basename(path))
@@ -69,11 +69,11 @@ def split_name(name):
 def label_order(parent):
     """Build labels in the order given on the command line: <out dir>/builds.txt (label TAB folder TAB commit), if there is one."""
     p = os.path.join(parent, 'builds.txt')
-    return [l.split('\t')[0] for l in open(p).read().splitlines() if l.strip()] if os.path.isfile(p) else []
+    return [l.split('\t')[0] for l in open(p, encoding='utf-8', errors='replace').read().splitlines() if l.strip()] if os.path.isfile(p) else []
 
 def label(case):
     words = re.split(r'[-_]', case)
-    plat = 'Proton' if ('proton' in words or 'p' in words) else 'native'
+    plat = 'Proton' if ('proton' in words or 'p' in words) else 'Windows' if 'windows' in words else 'macOS' if 'macos' in words else 'native'
     data = 'unmodded' if 'gog' in words else 'modded'
     return f'{plat}, {data}'
 
@@ -148,8 +148,8 @@ EXTRA_COLS = ['machine', 'cpu', 'ram_gb', 'os', 'kernel', 'resolution']
 def history(csvpath, outdir, note, driver, machine='', cpu='', ram_gb='', os_name='', kernel=''):
     """Append one row per successful run to csvpath (header written if the file is new or empty; existing rows are never touched)."""
     outdir = outdir.rstrip('/')
-    cfg = dict(l.split('=', 1) for l in open(os.path.join(outdir, 'settings.txt')).read().splitlines() if '=' in l)
-    builds = [l.split('\t') for l in open(os.path.join(outdir, 'builds.txt')).read().splitlines() if l.strip()]
+    cfg = dict(l.split('=', 1) for l in open(os.path.join(outdir, 'settings.txt'), encoding='utf-8', errors='replace').read().splitlines() if '=' in l)
+    builds = [l.split('\t') for l in open(os.path.join(outdir, 'builds.txt'), encoding='utf-8', errors='replace').read().splitlines() if l.strip()]
     rows = []
     for d in collect([outdir]):
         case, num, lab = split_name(os.path.basename(d))
@@ -157,11 +157,11 @@ def history(csvpath, outdir, note, driver, machine='', cpu='', ram_gb='', os_nam
         s, why = run_stats(d)
         if s is None or b is None: continue
         launch = os.path.join(d, 'meitou', 'launch.txt')
-        m = re.match(r'started (\d{4}-\d\d-\d\d)T(\d\d:\d\d:\d\d)', open(launch).readline()) if os.path.isfile(launch) else None
+        m = re.match(r'started (\d{4}-\d\d-\d\d)T(\d\d:\d\d:\d\d)', open(launch, encoding='utf-8', errors='replace').readline()) if os.path.isfile(launch) else None
         summ = os.path.join(d, 'bench', 'summary.md')
         gpu = res = ''
         if os.path.isfile(summ):
-            line = [l for l in open(summ).read().splitlines() if l.startswith(('Play', '#')) is False and l.strip()]
+            line = [l for l in open(summ, encoding='utf-8', errors='replace').read().splitlines() if l.startswith(('Play', '#')) is False and l.strip()]
             line = line[0] if line else ''
             g = re.search(r'\d+x\d+, (.*?), upscaler', line)
             gpu = g.group(1) if g else line
@@ -171,26 +171,31 @@ def history(csvpath, outdir, note, driver, machine='', cpu='', ram_gb='', os_nam
                      cfg.get('save', ''), cfg.get('segments', ''), num, f"{s['over33']:.1f}", fmt(s['p50']), fmt(s['p99']), fmt(s['mx'], 0), s['over100'],
                      fmt(s['sw_p99']), fmt(s['sw_max'], 0), gpu, driver, note, machine, cpu, ram_gb, os_name, kernel, res])
     new = not os.path.isfile(csvpath) or os.path.getsize(csvpath) == 0
-    with open(csvpath, 'a', newline='') as f:
+    with open(csvpath, 'a', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
         if new: w.writerow(HIST_COLS + EXTRA_COLS)
         w.writerows(rows)
     print(f'history: {len(rows)} row(s) appended to {csvpath}')
     return 0
 
-def settings_diff(kit, build):
-    """Print 'key: kit value -> build value' for every setting of the kit file that the build's file lacks or has differently (extra keys in the build are ignored)."""
+def diff_settings(kit, build):
+    """Lines 'key: kit value -> build value' for every setting of the kit file that the build's file lacks or has differently (extra keys in the build are ignored)."""
     import json
-    a, b = json.load(open(kit)), json.load(open(build))
-    n = 0
+    with open(kit, encoding='utf-8') as f: a = json.load(f)
+    with open(build, encoding='utf-8') as f: b = json.load(f)
+    lines = []
     def walk(x, y, path):
-        nonlocal n
         for k, v in x.items():
             if isinstance(v, dict) and isinstance(y.get(k), dict): walk(v, y[k], path + k + '.')
             elif y.get(k) != v or k not in y:
-                n += 1; print(f'{path}{k}: {v!r} -> {y.get(k, "<missing>")!r}')
+                lines.append(f'{path}{k}: {v!r} -> {y.get(k, "<missing>")!r}')
     walk(a, b, '')
-    return 1 if n else 0
+    return lines
+
+def settings_diff(kit, build):
+    lines = diff_settings(kit, build)
+    for l in lines: print(l)
+    return 1 if lines else 0
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == '--settings-diff':

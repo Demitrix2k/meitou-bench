@@ -18,7 +18,9 @@ ROOT = os.path.dirname(HERE)
 
 SAVE = "bench-bases-2026-10-27"
 DATA = "gog"
-PLATFORMS = ("native", "proton")
+# `platform` column of the kit: native = the Linux build on Linux, proton = the Windows build under Proton on Linux, windows / macos = native builds there.
+PLATFORMS = ("native", "proton", "windows", "macos")
+OS_FAMILY = {"native": "linux", "proton": "linux", "windows": "windows", "macos": "macos"}
 MAX_RUNS = 2
 
 METRICS = {  # public name -> CSV column
@@ -33,7 +35,7 @@ METRICS = {  # public name -> CSV column
 REQUIRED_COLS = ["date", "time", "commit", "platform", "data", "save", "segments", "run"] + \
     list(METRICS.values()) + ["gpu", "nvidia_driver"]
 MACHINE_REQUIRED = ["id", "github", "cpu", "gpu", "ram_gb", "os", "resolution", "added"]
-MACHINE_OPTIONAL = ["name", "notes"]
+MACHINE_OPTIONAL = ["name", "notes", "os_family"]
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,46}[a-z0-9]$")
 HANDLE_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
 DATE_RE = re.compile(r"^\d{4}-\d\d-\d\d$")
@@ -219,6 +221,8 @@ def load_machines(data_dir, errors):
         for k in ("cpu", "gpu", "os", "name", "notes"):
             if k in m and not isinstance(m[k], str):
                 err("%s must be text" % k)
+        if m.get("os_family") and m["os_family"] not in ("linux", "windows", "macos"):
+            err("os_family %r must be linux, windows or macos (optional: it is derived from the platform of the results)" % m["os_family"])
         if not bad:
             machines[stem] = m
     return machines
@@ -405,7 +409,11 @@ def main():
         })
     for mid, ps in sorted(platforms.items()):
         if len(ps) > 1:
-            errors.append("data/results/%s: rows for both native and proton; use a separate machine id for each" % mid)
+            errors.append("data/results/%s: rows for more than one platform (%s); use a separate machine id for each (for example <id>-proton for Proton runs on a Linux machine)"
+                          % (mid, ", ".join(sorted(ps))))
+        fam = machines.get(mid, {}).get("os_family")
+        if fam and len(ps) == 1 and OS_FAMILY[next(iter(ps))] != fam:
+            errors.append("data/machines/%s.json: os_family %s does not fit the platform %s of its results" % (mid, fam, next(iter(ps))))
 
     for mid in machines:
         if mid not in platforms:
@@ -482,6 +490,7 @@ def main():
         m = dict(machines[mid])
         mrows = [r for r in rows if r["machine"] == mid]
         m["platform"] = next(iter(platforms[mid]))
+        m["os_family"] = OS_FAMILY[m["platform"]]
         m["commit_count"] = len({r["commit"] for r in mrows})
         m["last_date"] = max(r["date"] for r in mrows)
         m["first_date"] = min(r["date"] for r in mrows)
