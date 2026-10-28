@@ -529,6 +529,161 @@
     host.hidden = false;
   }
 
+  // ---- Compare two commits ----
+  var cmp = { a: "", b: "", m: "" };
+  function median(xs) {
+    var v = xs.slice().sort(function (x, y) { return x - y; }), n = v.length;
+    return n % 2 ? v[(n - 1) / 2] : (v[n / 2 - 1] + v[n / 2]) / 2;
+  }
+  function cmpCommits(mid) {
+    return D.commits.filter(function (c) {
+      return D.rows.some(function (r) { return r.commit === c.commit && r.machine === mid; });
+    }).sort(function (x, y) { return (y.date + y.time).localeCompare(x.date + x.time); });
+  }
+  function cmpTime(c) { return Date.parse(c.date + "T" + (c.time || "00:00:00") + "Z"); }
+  // B for a given A: the newest commit benchmarked 12-24 h before A; else the newest older than 24 h; else the previous commit.
+  function cmpOneDay(list, a) {
+    var H = 3600000, idx = list.indexOf(a), older = list.slice(idx + 1), t = cmpTime(a), i;
+    for (i = 0; i < older.length; i++) { var age = t - cmpTime(older[i]); if (age >= 12 * H && age <= 24 * H) return older[i]; }
+    for (i = 0; i < older.length; i++) { if (t - cmpTime(older[i]) > 24 * H) return older[i]; }
+    return older[0] || a;
+  }
+  function cmpDefaults(list) {
+    if (!list.length) return;
+    cmp.a = list[0].commit; cmp.b = cmpOneDay(list, list[0]).commit;
+  }
+  function cmpAgo(list, days) {
+    var a = list.filter(function (c) { return c.commit === cmp.a; })[0];
+    if (!a) return null;
+    var older = list.slice(list.indexOf(a) + 1);
+    for (var i = 0; i < older.length; i++) if (cmpTime(a) - cmpTime(older[i]) >= days * 86400000) return older[i];
+    return older[older.length - 1] || null;
+  }
+  function cmpRows(mid, commit, scen) {
+    return D.rows.filter(function (r) { return r.machine === mid && r.commit === commit && r.scenario === scen; });
+  }
+  function cmpUrl() {
+    var q = [];
+    if (cmp.a) q.push("a=" + encodeURIComponent(cmp.a));
+    if (cmp.b) q.push("b=" + encodeURIComponent(cmp.b));
+    if (multi() && cmp.m) q.push("m=" + encodeURIComponent(cmp.m));
+    try { history.replaceState(null, "", q.length ? "?" + q.join("&") + "#compare-sec" : location.pathname); } catch (e) {}
+  }
+  function cmpReadUrl() {
+    var p = new URLSearchParams(location.search);
+    var m = p.get("m");
+    cmp.m = m && machineById(m) ? m : (D.machines.filter(function (x) { return x.maintainer; })[0] || D.machines[0]).id;
+    var list = cmpCommits(cmp.m);
+    cmpDefaults(list);
+    function find(h) {
+      if (!h) return null;
+      return list.filter(function (c) { return c.commit.indexOf(h) === 0 || c.commit_full.indexOf(h) === 0; })[0];
+    }
+    var a = find(p.get("a")), b = find(p.get("b"));
+    if (a) cmp.a = a.commit;
+    if (b) cmp.b = b.commit;
+  }
+  function renderCompare() {
+    var sec = document.getElementById("compare-sec"), host = document.getElementById("compare");
+    var list = cmpCommits(cmp.m);
+    if (list.length < 2) { sec.hidden = true; return; }
+    sec.hidden = false;
+    host.innerHTML = "";
+    var bar = el("div", { class: "cmp-bar" });
+    function picker(label, key) {
+      var l = el("label", { class: "cmp-pick" }, label + " ");
+      var s = el("select");
+      list.forEach(function (c) { s.appendChild(el("option", { value: c.commit }, short(c.commit) + "  " + c.date + " " + (c.time || "").slice(0, 5))); });
+      s.value = cmp[key];
+      s.addEventListener("change", function () { cmp[key] = s.value; cmpUrl(); renderCompare(); });
+      l.appendChild(s); return l;
+    }
+    if (multi()) {
+      var ml = el("label", { class: "cmp-pick" }, "Machine ");
+      var ms = el("select");
+      D.machines.forEach(function (m) { ms.appendChild(el("option", { value: m.id }, mname(m) + " (" + platLabel(m) + ")")); });
+      ms.value = cmp.m;
+      ms.addEventListener("change", function () { cmp.m = ms.value; cmpDefaults(cmpCommits(cmp.m)); cmpUrl(); renderCompare(); });
+      ml.appendChild(ms); bar.appendChild(ml);
+    }
+    bar.appendChild(picker("A (new)", "a"));
+    bar.appendChild(picker("B (baseline)", "b"));
+    var quick = el("span", { class: "cmp-quick" });
+    [["vs previous benchmark", 0], ["vs ~1 day", 1], ["vs ~1 week", 7]].forEach(function (q) {
+      var btn = el("button", { type: "button" }, q[0]);
+      btn.addEventListener("click", function () {
+        var c = q[1] === 1 ? cmpOneDay(list, list.filter(function (x) { return x.commit === cmp.a; })[0]) : q[1] ? cmpAgo(list, q[1]) : list[Math.max(0, list.map(function (x) { return x.commit; }).indexOf(cmp.a)) + 1];
+        if (c) { cmp.b = c.commit; cmpUrl(); renderCompare(); }
+      });
+      quick.appendChild(btn);
+    });
+    bar.appendChild(quick);
+    host.appendChild(bar);
+
+    var ca = list.filter(function (c) { return c.commit === cmp.a; })[0], cb = list.filter(function (c) { return c.commit === cmp.b; })[0];
+    if (!ca || !cb) return;
+    var info = el("p", { class: "muted small" });
+    info.innerHTML = 'A: <a href="' + REPO + "/commit/" + esc(ca.commit_full) + '"><code>' + esc(short(ca.commit)) + "</code></a> " + esc(ca.date) +
+      ' &nbsp; B: <a href="' + REPO + "/commit/" + esc(cb.commit_full) + '"><code>' + esc(short(cb.commit)) + "</code></a> " + esc(cb.date) +
+      ' &nbsp; <a href="' + REPO + "/compare/" + esc(cb.commit_full) + "..." + esc(ca.commit_full) + '">upstream changes between them</a>';
+    host.appendChild(info);
+    if (ca.commit === cb.commit) host.appendChild(el("p", { class: "muted" }, "A and B are the same commit."));
+
+    var sa = {}, sb = {};
+    D.rows.forEach(function (r) {
+      if (r.machine !== cmp.m) return;
+      if (r.commit === ca.commit) sa[r.series] = 1;
+      if (r.commit === cb.commit) sb[r.series] = 1;
+    });
+    var ka = Object.keys(sa), kb = Object.keys(sb);
+    if (ka.length !== 1 || kb.length !== 1 || ka[0] !== kb[0]) {
+      host.appendChild(el("p", { class: "caveat" }, "Warning: A is from " + ka.map(seriesName).join(", ") + " and B from " + kb.map(seriesName).join(", ") +
+        ". The benchmark procedure differs between series (see \"Runs and series\"), so a difference may come from the procedure rather than from the code."));
+    }
+
+    var multiRun = false;
+    Object.keys(D.scenarios).forEach(function (sid) {
+      var ra = cmpRows(cmp.m, ca.commit, sid), rb = cmpRows(cmp.m, cb.commit, sid);
+      var sc = D.scenarios[sid];
+      var h = el("h3", { class: "cmp-h" }, sc.title);
+      host.appendChild(h);
+      if (!ra.length || !rb.length) {
+        host.appendChild(el("p", { class: "muted" }, "Not measured for " + (!ra.length && !rb.length ? "either commit" : !ra.length ? "A" : "B") + "."));
+        return;
+      }
+      if (ra.length > 1 || rb.length > 1) multiRun = true;
+      var wrap = el("div", { class: "tablewrap" }), t = el("table", { class: "cmp" });
+      t.innerHTML = "<thead><tr><th>Metric</th><th>A " + esc(short(ca.commit)) + " (" + ra.length + (ra.length > 1 ? " runs" : " run") + ")</th><th>B " +
+        esc(short(cb.commit)) + " (" + rb.length + (rb.length > 1 ? " runs" : " run") + ")</th><th>Change</th><th>%</th></tr></thead>";
+      var tb = el("tbody");
+      ALLM.forEach(function (mt) {
+        var va = ra.map(function (r) { return r.metrics[mt.key]; }).filter(function (v) { return v != null; });
+        var vb = rb.map(function (r) { return r.metrics[mt.key]; }).filter(function (v) { return v != null; });
+        var tr = el("tr");
+        tr.appendChild(el("td", {}, mt.label));
+        if (!va.length || !vb.length) {
+          tr.appendChild(el("td", {}, va.length ? fmt(median(va)) : "n/a"));
+          tr.appendChild(el("td", {}, vb.length ? fmt(median(vb)) : "n/a"));
+          tr.appendChild(el("td", {}, "")); tr.appendChild(el("td", {}, ""));
+        } else {
+          var x = median(va), y = median(vb), d = x - y;
+          var pct = y !== 0 ? d / y * 100 : null;
+          var rd = Math.round(d * 10) / 10;
+          var cls = Math.abs(pct == null ? d : pct) < 2 || rd === 0 ? "" : d < 0 ? "good" : "bad";
+          tr.appendChild(el("td", {}, fmt(x)));
+          tr.appendChild(el("td", {}, fmt(y)));
+          tr.appendChild(el("td", { class: cls }, (d > 0 ? "+" : "") + fmt(d)));
+          tr.appendChild(el("td", { class: cls }, pct == null ? "n/a" : (pct > 0 ? "+" : "") + (Math.round(pct * 10) / 10) + "%"));
+        }
+        tb.appendChild(tr);
+      });
+      t.appendChild(tb); wrap.appendChild(t); host.appendChild(wrap);
+    });
+    host.appendChild(el("p", { class: "muted small" },
+      "Green = better (lower), red = worse; changes under 2% are not colored. When a commit has several runs of a scenario, the median is used (the mean for two runs)" +
+      (multiRun ? ", so run 1 (possibly cache-cold) and run 2 are both included." : ".") + " Runs on one machine only; single runs are noisy, so treat small differences with caution."));
+  }
+
   function renderResults() {
     renderMachines(); renderCaveat(); renderCoverage(); renderSameCommit(); renderScenarios(); renderTimeline();
   }
@@ -537,6 +692,7 @@
     D = d;
     D.machines.forEach(function (m) { state.selected[m.id] = true; });
     renderStandard(); renderSeries(); renderControls(); renderResults();
+    cmpReadUrl(); renderCompare();
     document.getElementById("controls-sec").hidden = false;
     var t; window.addEventListener("resize", function () { clearTimeout(t); t = setTimeout(renderScenarios, 150); });
   }
