@@ -1,0 +1,12 @@
+{
+  "id": "rtx3070-laptop-linux",
+  "github": "Demitrix2k",
+  "name": "Maintainer laptop",
+  "cpu": "AMD Ryzen 7 6800HS",
+  "gpu": "NVIDIA GeForce RTX 3070 Laptop GPU",
+  "ram_gb": 14,
+  "os": "Linux",
+  "resolution": "2560x1406",
+  "notes": "Native Linux build. Window maximised on a 2560x1440 screen, so it renders at 2560x1406.",
+  "added": "2026-10-27"
+}

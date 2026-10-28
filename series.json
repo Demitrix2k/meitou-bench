@@ -1,9 +1,6 @@
 {
   "repo_url": "https://github.com/VlcekM/MeitouClient",
-  "default_machine": "rtx3070-laptop-linux",
-  "machines": {
-    "rtx3070-laptop-linux": "Laptop, NVIDIA RTX 3070 Laptop GPU, 14 GB RAM, Linux"
-  },
+  "maintainer_machine": "rtx3070-laptop-linux",
   "scenarios": {
     "idle,orbit,zoom,pan": {
       "id": "play",

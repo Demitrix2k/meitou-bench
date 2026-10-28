@@ -12,12 +12,13 @@
   <h1>Meitou daily benchmarks</h1>
   <p class="lead">Meitou is a C#/.NET Vulkan reimplementation of the game Kenshi
   (upstream: <a href="https://github.com/VlcekM/MeitouClient">VlcekM/MeitouClient</a>).
-  After each upstream <code>master</code> update, one fixed benchmark is run and its numbers are added here,
+  After each upstream <code>master</code> update, one fixed benchmark is run (by the maintainer, and by contributors on their own machines) and its numbers are added here,
   next to a list of what changed upstream since the previous benchmarked commit.
   <strong>Lower is better for every metric.</strong></p>
 </header>
 
 <main class="wrap">
+  <p class="box" id="standard"></p>
   <section class="box" id="setup">
     <h2>Setup</h2>
     <p class="muted">Fixed for every run, so numbers from different days are comparable.</p>
@@ -27,9 +28,8 @@
       <div><dt>Save</dt><dd>The same frozen save every run: two player bases; never played or saved over</dd></div>
       <div><dt>Graphics</dt><dd>Full settings</dd></div>
       <div><dt>Measurement</dt><dd>MangoHud frame-time logging; frame metrics come from the game's bench frames</dd></div>
-      <div><dt>Machine</dt><dd id="machine-desc">Laptop, NVIDIA RTX 3070 Laptop GPU, 14 GB RAM, Linux</dd></div>
-      <div><dt>GPU / driver</dt><dd id="gpu-driver">-</dd></div>
-      <div><dt>Run by</dt><dd>The maintainer of this page, after each upstream master update</dd></div>
+      <div><dt>Machines</dt><dd>The maintainer's laptop and machines of contributors; see "Machines" below</dd></div>
+      <div><dt>Run by</dt><dd>The maintainer after each upstream master update; contributors with the dev kit in <code>kit/</code></dd></div>
     </dl>
     <p>Two scenarios are run: the <strong>play benchmark</strong> is upstream's own <code>--play-bench</code>
     (camera segments idle, orbit, zoom, pan); the <strong>base switch</strong> jumps the camera four times between the two bases.
@@ -44,9 +44,23 @@
     </details>
   </section>
 
-  <div class="toolbar" id="machine-bar" hidden>
-    <label>Machine <select id="machine-select"></select></label>
-  </div>
+  <section id="machines-sec">
+    <h2>Machines</h2>
+    <p class="muted">Who ran the benchmark, on what. Contributors submit results by pull request (see CONTRIBUTING.md in the repository); the handle links to their GitHub profile.</p>
+    <div id="machines"></div>
+  </section>
+
+  <section id="coverage-sec">
+    <h2>Coverage</h2>
+    <div id="coverage"></div>
+  </section>
+
+  <section id="controls-sec" hidden>
+    <div id="controls" class="controls"></div>
+    <p id="caveat" class="caveat" hidden></p>
+  </section>
+
+  <section id="samecommit" hidden></section>
 
   <div id="scenarios"></div>
 

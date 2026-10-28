@@ -13,7 +13,8 @@
     { key: "slow_world_max_ms", label: "Slow-world tick max (ms)", unit: " ms" }
   ]);
   var NS = "http://www.w3.org/2000/svg";
-  var D = null, machine = null;
+  var D = null;
+  var state = { selected: {}, runMode: "warm", relative: false, ref: "" };
   var tip = document.getElementById("tip");
 
   function el(tag, attrs, text) {
@@ -38,20 +39,45 @@
     return Math.abs(v) >= 100 ? String(Math.round(v)) : String(Math.round(v * 10) / 10);
   }
   function short(c) { return c.slice(0, 8); }
+  function mname(m) { return m.name || m.id; }
+  function mcolor(m) { return "var(--m" + (D.machines.indexOf(m) % 8) + ")"; }
+  function mdot(m) { return '<span class="dot" style="background:' + mcolor(m) + '"></span>'; }
+  function handleLink(m) {
+    return '<a href="https://github.com/' + encodeURIComponent(m.github) + '">@' + esc(m.github) + "</a>";
+  }
+  function machineById(id) { return D.machines.filter(function (m) { return m.id === id; })[0]; }
+  function selectedMachines() { return D.machines.filter(function (m) { return state.selected[m.id]; }); }
+  function multi() { return D.machines.length > 1; }
 
-  function rowsFor(commit, scen) {
+  function rowsFor(m, commit, scen) {
     return D.rows.filter(function (r) {
-      return r.commit === commit && r.scenario === scen && r.machine === machine;
+      return r.commit === commit && r.scenario === scen && r.machine === m.id;
     }).sort(function (a, b) { return a.run - b.run; });
   }
+  // Rows of one machine that count for a target (the target commit itself, else a code-identical variant).
+  function targetRows(m, t, scen) {
+    var rs = D.rows.filter(function (r) { return r.machine === m.id && r.scenario === scen && r.target === t.commit; });
+    var ex = rs.filter(function (r) { return r.commit_full === t.commit_full; }), use = ex.length ? ex : rs;
+    if (!use.length) return [];
+    return use.filter(function (r) { return r.commit === use[0].commit; }).sort(function (a, b) { return a.run - b.run; });
+  }
+  function currentTarget() { return D.targets[D.targets.length - 1]; }
   function commitsShown() {
+    var sel = selectedMachines().map(function (m) { return m.id; });
     return D.commits.filter(function (c) {
-      return D.rows.some(function (r) { return r.commit === c.commit && r.machine === machine; });
+      return D.rows.some(function (r) { return r.commit === c.commit && sel.indexOf(r.machine) >= 0; });
     });
   }
   function seriesName(id) {
     var s = D.series.filter(function (x) { return x.id === id; })[0];
-    return s ? s.label : "Series " + id;
+    return s ? s.label : id == null ? "no series" : "Series " + id;
+  }
+  // The runs of one (machine, commit, scenario) that the run selector wants drawn.
+  function pick(rs) {
+    var r1 = rs.filter(function (r) { return r.run === 1; })[0], r2 = rs.filter(function (r) { return r.run === 2; })[0];
+    if (state.runMode === "run1") return r1 ? [r1] : [];
+    if (state.runMode === "both") return [r1, r2].filter(Boolean);
+    return r2 ? [r2] : r1 ? [r1] : [];
   }
 
   function showTip(html, ev) {
@@ -63,13 +89,6 @@
   }
   function hideTip() { tip.hidden = true; }
 
-  function niceMax(v) {
-    if (v <= 0) return 1;
-    var p = Math.pow(10, Math.floor(Math.log10(v))), n = v / p;
-    var m = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10;
-    return m * p;
-  }
-
   function niceTicks(v) {
     if (v <= 0) v = 1;
     var raw = v / 4, p = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / p;
@@ -78,39 +97,75 @@
     return out;
   }
 
+  // Reference value for relative mode: this machine's value at its reference commit.
+  function baseValue(m, scen, key, run) {
+    var refs = state.ref ? D.targets.filter(function (t) { return t.commit === state.ref; }) : D.targets;
+    for (var i = 0; i < refs.length; i++) {
+      var rs = targetRows(m, refs[i], scen).filter(function (r) { return r.metrics[key] != null; });
+      if (!rs.length) continue;
+      var same = rs.filter(function (r) { return r.run === run; })[0];
+      var r = same || rs[rs.length - 1];
+      return r.metrics[key];
+    }
+    return null;
+  }
+
   function chart(host, metric, scen, commits) {
     var box = el("div", { class: "chart" });
-    box.appendChild(el("h3", {}, metric.label));
+    box.appendChild(el("h3", {}, metric.label + (state.relative ? " - % of own baseline" : "")));
     host.appendChild(box);
     var W = Math.max(240, Math.floor(box.clientWidth - 20)), H = 250;
     var m = { l: 46, r: 26, t: 14, b: 48 };
     var pw = W - m.l - m.r, ph = H - m.t - m.b;
     var svg = sv("svg", { width: W, height: H, viewBox: "0 0 " + W + " " + H, role: "img",
       "aria-label": metric.label + " per benchmarked commit" });
-    var max = 0;
-    commits.forEach(function (c) {
-      rowsFor(c.commit, scen).forEach(function (r) { var v = r.metrics[metric.key]; if (v != null && v > max) max = v; });
+    var n = commits.length;
+
+    // collect points per machine and line group
+    var lines = [], max = 0;
+    selectedMachines().forEach(function (mc) {
+      var groups = {};
+      commits.forEach(function (c, i) {
+        pick(rowsFor(mc, c.commit, scen)).forEach(function (r) {
+          var v = r.metrics[metric.key];
+          if (v == null) return;
+          var rel = null;
+          if (state.relative) {
+            var b = baseValue(mc, scen, metric.key, r.run);
+            if (b == null || b === 0) return;
+            rel = v / b * 100;
+          }
+          var shown = state.relative ? rel : v;
+          if (shown > max) max = shown;
+          var g = state.runMode === "both" ? r.run : 0;
+          (groups[g] = groups[g] || []).push({ i: i, c: c, r: r, v: v, shown: shown, m: mc, off: !!c.off_target });
+        });
+      });
+      Object.keys(groups).forEach(function (g) { lines.push({ m: mc, g: +g, pts: groups[g] }); });
     });
+    if (state.relative && max < 110) max = 110;
     var tk = niceTicks(max);
     max = tk[tk.length - 1];
-    var n = commits.length;
     function X(i) { return m.l + (n === 1 ? pw / 2 : (pw * i) / (n - 1)); }
     function Y(v) { return m.t + ph - (v / max) * ph; }
     for (var g = 0; g < tk.length; g++) {
       var gv = tk[g], gy = Y(gv);
       svg.appendChild(sv("line", { class: "grid", x1: m.l, x2: W - m.r, y1: gy, y2: gy }));
-      var t = sv("text", { x: m.l - 5, y: gy + 4, "text-anchor": "end" }); t.textContent = fmt(gv); svg.appendChild(t);
+      var t = sv("text", { x: m.l - 5, y: gy + 4, "text-anchor": "end" });
+      t.textContent = fmt(gv) + (state.relative ? "%" : ""); svg.appendChild(t);
     }
-    // series breaks
+    if (state.relative) {
+      var ry = Y(100);
+      svg.appendChild(sv("line", { class: "ref100", x1: m.l, x2: W - m.r, y1: ry, y2: ry }));
+    }
     commits.forEach(function (c, i) {
-      if (i > 0 && c.series !== commits[i - 1].series) {
+      if (i > 0 && c.series != null && commits[i - 1].series != null && c.series !== commits[i - 1].series) {
         var bx = (X(i) + X(i - 1)) / 2;
         svg.appendChild(sv("line", { class: "brk", x1: bx, x2: bx, y1: m.t, y2: m.t + ph }));
         var lt = sv("text", { class: "brklabel", x: bx + 4, y: m.t + 10 });
         lt.textContent = seriesName(c.series).toLowerCase() + " starts"; svg.appendChild(lt);
       }
     });
-    // x labels (thin out on narrow charts)
     var step = Math.max(1, Math.ceil(n / Math.max(1, Math.floor(pw / 62))));
     commits.forEach(function (c, i) {
       if (i % step && i !== n - 1) return;
@@ -119,32 +174,38 @@
       var b = sv("text", { x: tx, y: H - 11, "text-anchor": "middle" });
       b.textContent = c.date.slice(5); svg.appendChild(b);
     });
-    // lines + markers per run number
-    [1, 2].forEach(function (run) {
-      var pts = [];
-      commits.forEach(function (c, i) {
-        var r = rowsFor(c.commit, scen).filter(function (x) { return x.run === run; })[0];
-        if (r && r.metrics[metric.key] != null) pts.push({ i: i, r: r, c: c, v: r.metrics[metric.key] });
-      });
-      if (pts.length > 1) {
-        svg.appendChild(sv("polyline", { class: run === 1 ? "l1" : "l2",
-          points: pts.map(function (p) { return X(p.i) + "," + Y(p.v); }).join(" ") }));
+
+    lines.forEach(function (ln) {
+      var col = mcolor(ln.m);
+      var on = ln.pts.filter(function (p) { return !p.off; });
+      if (on.length > 1) {
+        svg.appendChild(sv("polyline", { class: "ml" + (ln.g === 2 ? " dashed" : ""), style: "stroke:" + col,
+          points: on.map(function (p) { return X(p.i) + "," + Y(p.shown); }).join(" ") }));
       }
-      pts.forEach(function (p) {
-        var x = X(p.i), y = Y(p.v), mk;
-        if (run === 1) mk = sv("circle", { class: "p1", cx: x, cy: y, r: 5.5 });
-        else mk = sv("rect", { class: "p2", x: x - 4.5, y: y - 4.5, width: 9, height: 9, transform: "rotate(45 " + x + " " + y + ")" });
+    });
+    lines.forEach(function (ln) {
+      var col = mcolor(ln.m);
+      ln.pts.forEach(function (p) {
+        var x = X(p.i), y = Y(p.shown), mk;
+        if (p.r.run === 1) mk = sv("circle", { class: "p1" + (p.off ? " off" : ""), cx: x, cy: y, r: 5.5, style: "fill:" + col });
+        else mk = sv("rect", { class: "p2" + (p.off ? " off" : ""), x: x - 4.5, y: y - 4.5, width: 9, height: 9,
+          transform: "rotate(45 " + x + " " + y + ")", style: "stroke:" + col });
         svg.appendChild(mk);
         var hit = sv("circle", { class: "hit", cx: x, cy: y, r: 11, tabindex: 0 });
         var html = "<b>" + esc(short(p.c.commit)) + "</b> - " + esc(p.r.date + " " + p.r.time) + "<br>" +
-          esc(metric.label) + ": <b>" + fmt(p.v) + "</b><br>run " + run + ", " + esc(seriesName(p.r.series));
+          (multi() ? mdot(p.m) + esc(mname(p.m)) + "<br>" : "") +
+          esc(metric.label) + ": <b>" + fmt(p.v) + "</b>" +
+          (state.relative ? " (" + fmt(p.shown) + "% of own baseline)" : "") +
+          "<br>run " + p.r.run + ", " + esc(seriesName(p.r.series)) +
+          (p.off ? "<br><i>off-target commit: not a benchmark target</i>" : "");
         hit.addEventListener("mousemove", function (ev) { showTip(html, ev); });
         hit.addEventListener("mouseleave", hideTip);
         hit.addEventListener("focus", function () {
           var b = hit.getBoundingClientRect(); showTip(html, { clientX: b.left, clientY: b.top });
         });
         hit.addEventListener("blur", hideTip);
-        var ti = sv("title"); ti.textContent = short(p.c.commit) + " run " + run + ": " + fmt(p.v) + metric.unit;
+        var ti = sv("title");
+        ti.textContent = (multi() ? mname(p.m) + " " : "") + short(p.c.commit) + " run " + p.r.run + ": " + fmt(p.v) + metric.unit;
         hit.appendChild(ti);
         svg.appendChild(hit);
       });
@@ -154,34 +215,41 @@
 
   function legend() {
     var d = el("div", { class: "legend" });
-    d.innerHTML =
-      '<span><svg width="16" height="14"><circle cx="8" cy="7" r="4.5" fill="var(--run1)"/></svg> run 1</span>' +
-      '<span><svg width="16" height="14"><rect x="4" y="3" width="8" height="8" transform="rotate(45 8 7)" fill="var(--panel)" stroke="var(--run2)" stroke-width="2"/></svg> run 2</span>' +
-      '<span><svg width="16" height="14"><line x1="8" x2="8" y1="0" y2="14" stroke="var(--brk)" stroke-dasharray="3 2"/></svg> series break</span>' +
-      "<span>lower is better</span>";
+    var h = "";
+    if (multi()) selectedMachines().forEach(function (m) {
+      h += "<span>" + mdot(m) + esc(mname(m)) + "</span>";
+    });
+    var showR2 = state.runMode !== "run1";
+    h += '<span><svg width="16" height="14"><circle cx="8" cy="7" r="4.5" fill="var(--text)"/></svg> run 1' +
+      (state.runMode === "warm" ? " (only when there is no run 2)" : "") + "</span>";
+    if (showR2) h += '<span><svg width="16" height="14"><rect x="4" y="3" width="8" height="8" transform="rotate(45 8 7)" fill="var(--panel)" stroke="var(--text)" stroke-width="2"/></svg> run 2</span>';
+    h += '<span><svg width="16" height="14"><line x1="8" x2="8" y1="0" y2="14" stroke="var(--brk)" stroke-dasharray="3 2"/></svg> series break</span>';
+    if (state.relative) h += '<span><svg width="22" height="14"><line x1="0" x2="22" y1="7" y2="7" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="2 2"/></svg> 100% = own baseline</span>';
+    h += '<span><svg width="16" height="14"><circle cx="8" cy="7" r="4.5" fill="var(--text)" opacity=".3"/></svg> faded = off-target commit (not a benchmark target; not connected)</span>';
+    h += "<span>lower is better</span>";
+    d.innerHTML = h;
     return d;
   }
 
-  function summary(scen, commits) {
-    var cur = commits[commits.length - 1], prev = commits[commits.length - 2];
+  function summaryFor(scen, commits, mc) {
+    var shown = commits.filter(function (c) { return rowsFor(mc, c.commit, scen).length; });
+    var cur = shown[shown.length - 1], prev = shown[shown.length - 2];
     if (!cur) return null;
     var wrap = el("div", { class: "box" });
-    wrap.appendChild(el("h3", {}, "Latest vs previous"));
-    var cr = rowsFor(cur.commit, scen);
+    wrap.appendChild(el("h3", {}, "Latest vs previous" + (multi() ? ": " + mname(mc) : "")));
     if (!prev) { wrap.appendChild(el("p", { class: "muted" }, "Only one benchmarked commit so far.")); return wrap; }
-    var pr = rowsFor(prev.commit, scen);
-    function cell(rs) {
-      return rs.length ? rs.map(function (r) { return r.run; }) : [];
-    }
+    var cr = rowsFor(mc, cur.commit, scen), pr = rowsFor(mc, prev.commit, scen);
     function vals(rs, k) {
       return rs.map(function (r) { return "<span title=\"run " + r.run + "\">" + fmt(r.metrics[k]) + "</span>"; }).join(" / ");
     }
+    var label = state.runMode === "warm" ? "warm runs" : "run 1";
     var t = el("table");
     t.innerHTML = "<thead><tr><th>Metric</th><th>" + esc(short(prev.commit)) + " (previous)</th><th>" +
-      esc(short(cur.commit)) + " (latest)</th><th>Change, run 1</th></tr></thead>";
+      esc(short(cur.commit)) + " (latest)</th><th>Change, " + label + "</th></tr></thead>";
     var tb = el("tbody");
+    function sel(rs) { return state.runMode === "warm" ? pick(rs)[0] : rs.filter(function (r) { return r.run === 1; })[0]; }
     ALLM.forEach(function (mt) {
-      var a = pr.filter(function (r) { return r.run === 1; })[0], b = cr.filter(function (r) { return r.run === 1; })[0];
+      var a = sel(pr), b = sel(cr);
       var ch = "n/a", cls = "";
       if (a && b && a.metrics[mt.key] != null && b.metrics[mt.key] != null) {
         var d = b.metrics[mt.key] - a.metrics[mt.key];
@@ -196,7 +264,7 @@
     });
     t.appendChild(tb);
     var tw = el("div", { class: "tablewrap" }); tw.appendChild(t); wrap.appendChild(tw);
-    var note = "Values are run 1 / run 2 where both exist. Change compares run 1 with run 1.";
+    var note = "Values are run 1 / run 2 where both exist. Change compares " + (state.runMode === "warm" ? "run 2 (run 1 where there is no run 2)" : "run 1 with run 1") + ".";
     if (prev.series !== cur.series) note += " The two commits are in different series (" + seriesName(prev.series) + " vs " + seriesName(cur.series) + "), so the procedure differs.";
     wrap.appendChild(el("p", { class: "muted" }, note));
     return wrap;
@@ -206,6 +274,7 @@
     var host = document.getElementById("scenarios");
     host.innerHTML = "";
     var commits = commitsShown();
+    if (!commits.length) { host.appendChild(el("p", { class: "box muted" }, "No machine selected.")); return; }
     Object.keys(D.scenarios).forEach(function (sid) {
       var sc = D.scenarios[sid];
       var sec = el("section", { class: "scen" });
@@ -216,22 +285,104 @@
       sec.appendChild(grid);
       host.appendChild(sec);
       METRICS.forEach(function (mt) { chart(grid, mt, sid, commits); });
-      var s = summary(sid, commits.filter(function (c) { return rowsFor(c.commit, sid).length; }));
-      if (s) sec.appendChild(s);
+      selectedMachines().forEach(function (mc) {
+        var s = summaryFor(sid, commits, mc);
+        if (s) sec.appendChild(s);
+      });
     });
   }
 
-  function metricsTable(commit) {
-    var out = "";
+  // Latest benchmark target that at least two selected machines ran. Off-target commits are not compared.
+  function renderSameCommit() {
+    var host = document.getElementById("samecommit");
+    host.innerHTML = ""; host.hidden = true;
+    var sel = selectedMachines();
+    if (sel.length < 2) return;
+    var found = null;
+    for (var i = D.targets.length - 1; i >= 0 && !found; i--) {
+      var t = D.targets[i];
+      var ms = sel.filter(function (m) { return t.machines.indexOf(m.id) >= 0; });
+      if (ms.length > 1) found = { t: t, ms: ms };
+    }
+    if (!found) return;
+    host.hidden = false;
+    host.appendChild(el("h2", {}, "Same commit, different machines"));
+    var p = el("p", { class: "muted" });
+    p.innerHTML = "Latest benchmark target run by more than one machine: " +
+      '<a class="sha" href="' + REPO + "/commit/" + esc(found.t.commit_full) + '">' + esc(found.t.commit) + "</a> (" + esc(found.t.label) + "), " + esc(found.t.date) +
+      ". A commit that is code-identical to the target counts for it. Different GPU, CPU or resolution change every number, so read this as a hardware comparison, not a code comparison.";
+    host.appendChild(p);
     Object.keys(D.scenarios).forEach(function (sid) {
-      var rs = rowsFor(commit, sid);
-      if (!rs.length) return;
-      out += "<tr><th colspan=\"6\" style=\"text-align:left\">" + esc(D.scenarios[sid].title) + "</th></tr>";
-      rs.forEach(function (r) {
-        out += "<tr><td>run " + r.run + (r.series === 2 ? (r.run === 1 ? " (cold?)" : " (warm)") : "") + (r.note ? ' <span class="muted">(' + esc(r.note) + ")</span>" : "") + "</td><td>" +
-          fmt(r.metrics.over33_pct) + "%</td><td>" + fmt(r.metrics.p50_ms) + "</td><td>" + fmt(r.metrics.p99_ms) +
-          "</td><td>" + fmt(r.metrics.slow_world_p99_ms) + "</td><td>" + esc(r.date + " " + r.time) + "</td></tr>";
+      var any = found.ms.some(function (m) { return targetRows(m, found.t, sid).length; });
+      if (!any) return;
+      var html = "<h3>" + esc(D.scenarios[sid].title) + "</h3>" +
+        '<div class="tablewrap"><table><thead><tr><th>Machine</th><th>GPU</th><th>Resolution</th><th>Commit</th><th>Runs shown</th>';
+      ALLM.forEach(function (mt) { html += "<th>" + esc(mt.label) + "</th>"; });
+      html += "</tr></thead><tbody>";
+      found.ms.forEach(function (m) {
+        var all = targetRows(m, found.t, sid), rs = pick(all);
+        if (!rs.length) return;
+        html += "<tr><td>" + mdot(m) + esc(mname(m)) + " " + handleLink(m) + "</td><td>" + esc(m.gpu) + "</td><td>" + esc(m.resolution) +
+          "</td><td><span class=\"sha\">" + esc(all[0].commit) + "</span></td><td>" + rs.map(function (r) { return "run " + r.run; }).join(", ") + "</td>";
+        ALLM.forEach(function (mt) {
+          html += "<td>" + rs.map(function (r) { return fmt(r.metrics[mt.key]); }).join(" / ") + "</td>";
+        });
+        html += "</tr>";
       });
+      html += "</tbody></table></div>";
+      var box = el("div", { class: "box" }); box.innerHTML = html; host.appendChild(box);
+    });
+  }
+
+  // Machines x targets: which machine ran which benchmark target.
+  function renderCoverage() {
+    var host = document.getElementById("coverage");
+    var cur = currentTarget();
+    var html = '<div class="tablewrap"><table class="cov"><thead><tr><th>Machine</th>';
+    D.targets.forEach(function (t) {
+      html += '<th class="' + (t.kind === "release" ? "rel" : "") + '" title="' + esc(t.label + " (" + t.kind + ", " + t.date + ")") + '">' +
+        '<a class="sha" href="' + REPO + "/commit/" + esc(t.commit_full) + '">' + esc(t.commit) + "</a><br>" + esc(t.label) +
+        (t === cur ? "<br><b>current</b>" : "") + "</th>";
+    });
+    html += "</tr></thead><tbody>";
+    D.machines.forEach(function (m) {
+      html += "<tr><td>" + mdot(m) + esc(mname(m)) + "</td>";
+      D.targets.forEach(function (t) {
+        var has = t.machines.indexOf(m.id) >= 0;
+        var variant = has && !D.rows.some(function (r) { return r.machine === m.id && r.commit_full === t.commit_full; });
+        html += '<td class="' + (has ? "yes" : "no") + '" title="' + (has ? (variant ? "code-identical commit counts for this target" : "benchmarked") : "not benchmarked") + '">' +
+          (has ? (variant ? "&#10003;*" : "&#10003;") : "&middot;") + "</td>";
+      });
+      html += "</tr>";
+    });
+    html += "</tbody></table></div>";
+    var off = D.commits.filter(function (c) { return c.off_target; });
+    host.innerHTML = html + '<p class="muted small">Bold headers are release targets: anchor points every machine should run at least once. * = a different commit that is code-identical to the target (only docs, site, tests, .github, tools or *.md differ).' +
+      (off.length ? " Off-target commits (" + off.map(function (c) { return esc(c.commit); }).join(", ") + ") are shown faded in the charts and left out of comparisons between machines." : "") + "</p>";
+  }
+
+  function renderStandard() {
+    var cur = currentTarget();
+    document.getElementById("standard").innerHTML =
+      "<b>Current standard:</b> <a class=\"sha\" href=\"" + REPO + "/commit/" + esc(cur.commit_full) + "\">" + esc(cur.commit) + "</a> (" + esc(cur.label) + ", " + esc(cur.date) + "). " +
+      "Everyone benchmarks the same commits so results can be compared. To add your machine: <code>cd kit &amp;&amp; ./update-and-build.sh native &amp;&amp; MACHINE=&lt;id&gt; ./bench.sh</code> " +
+      "(builds the current standard by default; see CONTRIBUTING.md).";
+  }
+
+  function metricsTable(commit) {
+    var out = "", sel = selectedMachines();
+    Object.keys(D.scenarios).forEach(function (sid) {
+      var block = "";
+      sel.forEach(function (m) {
+        rowsFor(m, commit, sid).forEach(function (r) {
+          block += "<tr><td>" + (multi() ? mdot(m) + esc(mname(m)) + ", " : "") + "run " + r.run +
+            (r.series === 2 ? (r.run === 1 ? " (cold?)" : " (warm)") : "") +
+            (r.note ? ' <span class="muted">(' + esc(r.note) + ")</span>" : "") + "</td><td>" +
+            fmt(r.metrics.over33_pct) + "%</td><td>" + fmt(r.metrics.p50_ms) + "</td><td>" + fmt(r.metrics.p99_ms) +
+            "</td><td>" + fmt(r.metrics.slow_world_p99_ms) + "</td><td>" + esc(r.date + " " + r.time) + "</td></tr>";
+        });
+      });
+      if (block) out += "<tr><th colspan=\"6\" style=\"text-align:left\">" + esc(D.scenarios[sid].title) + "</th></tr>" + block;
     });
     return '<div class="tablewrap"><table><thead><tr><th>Run</th><th>&gt;33 ms</th><th>p50 ms</th><th>p99 ms</th><th>slow-world p99 ms</th><th>when</th></tr></thead><tbody>' +
       out + "</tbody></table></div>";
@@ -243,12 +394,17 @@
     commitsShown().slice().reverse().forEach(function (c) {
       var box = el("article", { class: "tl" });
       var link = c.commit_full ? REPO + "/commit/" + c.commit_full : null;
+      var who = selectedMachines().filter(function (m) { return D.rows.some(function (r) { return r.commit === c.commit && r.machine === m.id; }); });
       var head = '<div class="tl-head"><h3>' + (link ? '<a class="sha" href="' + link + '">' + esc(c.commit) + "</a>" : '<span class="sha">' + esc(c.commit) + "</span>") +
-        '</h3><span class="when">' + esc(c.date) + " - " + esc(seriesName(c.series)) + "</span></div>";
-      var html = head + metricsTable(c.commit);
+        '</h3><span class="when">' + esc(c.date) + (c.series != null ? " - " + esc(seriesName(c.series)) : "") + "</span>" +
+        (multi() ? '<span class="who">' + who.map(function (m) { return mdot(m) + esc(mname(m)); }).join(" ") + "</span>" : "") + "</div>";
+      var tg = D.targets.filter(function (t) { return t.commit === c.target; })[0];
+      var tinfo = c.off_target ? '<span class="chip off">off-target: not a benchmark target</span>'
+        : tg ? '<span class="chip">' + (c.target_exact ? "benchmark target" : "counts for target " + esc(tg.commit)) + " (" + esc(tg.label) + ")</span>" : "";
+      var html = head + (tinfo ? "<div>" + tinfo + "</div>" : "") + metricsTable(c.commit);
       var ch = c.changes;
       if (c.first_benchmark) {
-        html += '<p class="muted">First benchmark: no change list.</p>';
+        html += '<p class="muted">First benchmarked commit: no change list.</p>';
       } else if (!ch) {
         html += '<p class="muted">Change list unavailable for this commit.</p>';
       } else {
@@ -283,34 +439,100 @@
     });
   }
 
-  function renderSetup() {
-    document.getElementById("machine-desc").textContent = D.machines[machine] || machine;
-    var rs = D.rows.filter(function (r) { return r.machine === machine; });
-    var seen = {};
-    rs.forEach(function (r) { seen[r.gpu + ", driver " + r.driver] = 1; });
-    document.getElementById("gpu-driver").textContent = Object.keys(seen).join("; ") || "-";
+  function renderSeries() {
     var ul = document.getElementById("series-list"); ul.innerHTML = "";
     D.series.forEach(function (s) {
       var li = el("li");
-      li.innerHTML = "<b>" + esc(s.label) + "</b> from " + esc(s.start) + ": " + esc(s.description);
+      li.innerHTML = "<b>" + esc(s.label) + "</b> from " + esc(s.start) + " (maintainer machine): " + esc(s.description);
       ul.appendChild(li);
     });
   }
 
-  function renderAll() { renderSetup(); renderScenarios(); renderTimeline(); }
+  function renderMachines() {
+    var host = document.getElementById("machines");
+    host.innerHTML = "";
+    D.machines.forEach(function (m) {
+      var card = el("label", { class: "mcard" });
+      var cb = el("input", { type: "checkbox" });
+      cb.checked = !!state.selected[m.id];
+      if (!multi()) cb.hidden = true;
+      cb.addEventListener("change", function () {
+        state.selected[m.id] = cb.checked;
+        if (!selectedMachines().length) { state.selected[m.id] = true; cb.checked = true; }
+        renderResults();
+      });
+      card.appendChild(cb);
+      var body = el("div", { class: "mbody" });
+      body.innerHTML =
+        '<div class="mtitle">' + mdot(m) + "<b>" + esc(mname(m)) + "</b> " + handleLink(m) + (m.maintainer ? ' <span class="chip">maintainer</span>' : "") + "</div>" +
+        '<div class="muted">' + esc(m.cpu) + "; " + esc(m.gpu) + "; " + esc(String(m.ram_gb)) + " GB RAM; " + esc(m.os) + " (" + esc(m.platform) + ")</div>" +
+        "<div>Renders at <b>" + esc(m.resolution) + "</b> - " + m.commit_count + " benchmarked commit" + (m.commit_count === 1 ? "" : "s") +
+        ", last " + esc(m.last_date) + "</div>" +
+        (m.notes ? '<div class="muted">' + esc(m.notes) + "</div>" : "");
+      card.appendChild(body);
+      host.appendChild(card);
+    });
+  }
+
+  function renderControls() {
+    var host = document.getElementById("controls");
+    host.innerHTML = "";
+    var runs = el("fieldset", { class: "ctl" });
+    runs.innerHTML = "<legend>Runs shown</legend>";
+    [["warm", "Warm runs (run 2 where present, else run 1)"], ["run1", "Run 1 only"], ["both", "Both runs"]].forEach(function (o) {
+      var l = el("label"), r = el("input", { type: "radio", name: "runmode", value: o[0] });
+      r.checked = state.runMode === o[0];
+      r.addEventListener("change", function () { state.runMode = o[0]; renderResults(); });
+      l.appendChild(r); l.appendChild(document.createTextNode(" " + o[1])); runs.appendChild(l);
+    });
+    runs.appendChild(el("p", { class: "muted small" }, "Each benchmark is run twice back-to-back. Run 1 may be cache-cold (disk cache, shader cache) and often looks worse; run 2 is the warm one. Runs are never averaged. Older single-run data counts as run 1."));
+    host.appendChild(runs);
+
+    if (multi()) {
+      var rel = el("fieldset", { class: "ctl" });
+      rel.innerHTML = "<legend>Compare machines</legend>";
+      var l = el("label"), cb = el("input", { type: "checkbox" });
+      cb.checked = state.relative;
+      cb.addEventListener("change", function () { state.relative = cb.checked; renderControls(); renderResults(); });
+      l.appendChild(cb); l.appendChild(document.createTextNode(" Relative to each machine's own baseline (% of own value)"));
+      rel.appendChild(l);
+      var l2 = el("label", { class: "reflab" });
+      l2.appendChild(document.createTextNode("Baseline commit "));
+      var sel = el("select"); sel.disabled = !state.relative;
+      sel.appendChild(el("option", { value: "" }, "each machine's first target"));
+      D.targets.forEach(function (t) { sel.appendChild(el("option", { value: t.commit }, short(t.commit) + " " + t.label)); });
+      sel.value = state.ref;
+      sel.addEventListener("change", function () { state.ref = sel.value; renderResults(); });
+      l2.appendChild(sel); rel.appendChild(l2);
+      rel.appendChild(el("p", { class: "muted small" }, "100% is the machine's own value at the baseline commit, so the shape of a trend can be compared across different hardware. Only benchmark targets can be a baseline; a machine that did not run the chosen one gets no line."));
+      host.appendChild(rel);
+    }
+  }
+
+  function renderCaveat() {
+    var host = document.getElementById("caveat");
+    var sel = selectedMachines();
+    host.hidden = true;
+    if (sel.length < 2 || state.relative) return;
+    var res = {}, gpu = {};
+    sel.forEach(function (m) { res[m.resolution] = 1; gpu[m.gpu] = 1; });
+    var diff = [];
+    if (Object.keys(gpu).length > 1) diff.push("GPUs");
+    if (Object.keys(res).length > 1) diff.push("resolutions");
+    host.textContent = "Caution: absolute values of machines with different " + (diff.length ? diff.join(" and ") : "CPUs or drivers") +
+      " are not comparable. A faster GPU at a lower resolution is not a code improvement. Use \"relative to own baseline\" to compare trends, or compare machines of the same hardware and resolution.";
+    host.hidden = false;
+  }
+
+  function renderResults() {
+    renderMachines(); renderCaveat(); renderCoverage(); renderSameCommit(); renderScenarios(); renderTimeline();
+  }
 
   function init(d) {
     D = d;
-    var ms = Object.keys(D.machines);
-    D.rows.forEach(function (r) { if (ms.indexOf(r.machine) < 0) ms.push(r.machine); });
-    machine = ms[0];
-    if (ms.length > 1) {
-      var sel = document.getElementById("machine-select");
-      ms.forEach(function (m) { var o = el("option", { value: m }, D.machines[m] || m); sel.appendChild(o); });
-      sel.addEventListener("change", function () { machine = sel.value; renderAll(); });
-      document.getElementById("machine-bar").hidden = false;
-    }
-    renderAll();
+    D.machines.forEach(function (m) { state.selected[m.id] = true; });
+    renderStandard(); renderSeries(); renderControls(); renderResults();
+    document.getElementById("controls-sec").hidden = false;
     var t; window.addEventListener("resize", function () { clearTimeout(t); t = setTimeout(renderScenarios, 150); });
   }
 

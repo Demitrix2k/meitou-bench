@@ -1,0 +1,37 @@
+name: Check submission
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Contributors may only add or change their own data. The repository owner may change anything.
+      - name: Only data files changed
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          OWNER: ${{ github.repository_owner }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$AUTHOR" = "$OWNER" ]; then echo "author is the repository owner: no path restriction"; exit 0; fi
+          bad=$(git diff --name-only "$BASE" "$HEAD" | grep -vE '^data/(machines|results)/' || true)
+          if [ -n "$bad" ]; then
+            echo "This pull request touches files outside data/machines/ and data/results/:"
+            echo "$bad"
+            exit 1
+          fi
+
+      - name: Clone upstream Meitou
+        run: git clone --filter=blob:none https://github.com/VlcekM/MeitouClient upstream
+
+      - name: Validate data
+        run: python3 tools/generate.py --check --repo upstream --ref origin/master

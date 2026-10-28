@@ -1,0 +1,79 @@
+# Contributing benchmark results
+
+Results from other machines are welcome. They are added by pull request and appear on the page next to the maintainer's, with your GitHub handle and your hardware.
+
+## The standard: everyone benchmarks the same commits
+
+`targets.json` lists the benchmark targets, oldest first. **The latest entry is the current standard**: run that commit. Comparing machines only makes sense on the same code.
+
+- **Run the latest target.** The dev kit builds it by default: `update-and-build.sh` reads `targets.json` (from the public repository, or the copy next to the kit when offline) and builds that commit.
+- **Release targets** (`kind: release`, for example `v0.16.0`) are anchor points: every machine should run each release at least once, so any two machines have a commit in common.
+- **Daily targets** are added by the maintainer after each upstream update (`tools/refresh.sh`). You do not need to chase every one; the latest is enough.
+- A commit that differs from a target only in `docs/`, `site/`, `tests/`, `.github/`, `tools/` or `*.md` is **code-identical** and counts for that target.
+- Any other commit on upstream `master` is accepted but flagged **off-target**: it is drawn faded on the page and left out of comparisons between machines. Setting `REF=...` when building makes your result off-target (the kit prints a warning).
+
+## 1. Run the kit
+
+Follow `kit/README.md`: get the benchmark save, build the current standard, run `bench.sh`.
+
+```
+cd kit
+export KENSHI_PATH=... MACHINE=<machine-id> WHO=<your GitHub handle>
+./update-and-build.sh native
+./bench.sh
+```
+
+Pick the machine id once and keep it: lowercase letters, digits and hyphens, 3 to 48 characters, for example `ryzen5600-rx6800-linux`. It is your folder name and the `MACHINE` value. Use a different id for a Proton setup than for a native one on the same computer (a machine's rows must all be one platform).
+
+The result is `kit/results/<date>-<commit>-<machine>/results.csv` (and `report.md`).
+
+## 2. Submit by pull request
+
+Fork this repository and add, in your fork:
+
+1. **First time only:** `data/machines/<machine-id>.json`
+
+   ```json
+   {
+     "id": "ryzen5600-rx6800-linux",
+     "github": "your-github-handle",
+     "name": "Optional display name",
+     "cpu": "AMD Ryzen 5 5600",
+     "gpu": "AMD Radeon RX 6800",
+     "ram_gb": 32,
+     "os": "Arch Linux",
+     "resolution": "1920x1080",
+     "notes": "Optional: anything useful, e.g. laptop on mains power",
+     "added": "2026-10-28"
+   }
+   ```
+
+   `id` must equal the file name without `.json`. `resolution` is the size the benchmark rendered at (the `resolution` column of your `results.csv`).
+
+2. `data/results/<machine-id>/<date>-<commit>.csv`: your `results.csv`, unchanged. `<date>` is the day of the run (`YYYY-MM-DD`), `<commit>` the 8-digit commit from the CSV. The `machine` column, if present, must equal your machine id.
+
+3. Optional: `data/results/<machine-id>/<date>-<commit>.report.md`: your `report.md` (rename it like this so several runs can sit in one folder).
+
+Open the pull request against `main`.
+
+## What the automatic check verifies
+
+On every pull request the check (`tools/generate.py --check`, against upstream `master`) fails if:
+
+- the PR changes anything outside `data/machines/` and `data/results/` (the repository owner is exempt);
+- a machine file is missing, misnamed or lacks a required field, or a results folder has no machine file;
+- a CSV is missing columns (the 19 columns of the kit; the 6 machine columns are optional) or a value is not a number;
+- `segments` is not one of the two known scenarios, `save` is not `bench-bases-2026-10-27`, or `data` is not `gog` (clean, unmodded data);
+- the `machine` column does not match your folder;
+- the commit does not exist upstream or is not on upstream `master`;
+- a row is duplicated, there are more than two runs of a scenario for one commit and machine, or one machine mixes native and Proton rows.
+
+Off-target commits do not fail the check; they are only flagged.
+
+## Rules
+
+- Your GitHub handle is shown on the site, linked to your profile, with your hardware and resolution. Do not submit if you do not want that.
+- Do not edit other people's files. Corrections to your own data are fine (a new commit in your PR).
+- Do not submit modded runs or runs with changed settings. The kit refuses a changed `meitou.user.json` and non-clean data; if something was odd (a different window size, background load, a crash), say so in the `note` column or the report instead of changing the numbers.
+- Only the `bench-bases-2026-10-27` save is accepted. Numbers from different save files or settings cannot be compared.
+- Run 1 may be cache-cold; that is normal and both runs are kept.
