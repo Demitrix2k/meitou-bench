@@ -40,7 +40,7 @@ export MACHINE="mylaptop-rtx3060"              # a short label for your report
 export WHO="your name or handle"
 ```
 
-3. Get the benchmark save. Download `bench-bases-2026-10-27.zip` (the save zip attached to this repo's GitHub release; link to be added: <LINK TBD>) and unzip it into `<Kenshi>/save/`. The script verifies the folder against `save-checksums.sha256` (every file's SHA-256 and the file count) before use, and refuses on a mismatch. You can check by hand:
+3. Get the benchmark save. Download `bench-bases-2026-10-27.zip` from the release [bench-save-2026-10-27](https://github.com/Demitrix2k/meitou-bench/releases/download/bench-save-2026-10-27/bench-bases-2026-10-27.zip) (zip SHA-256 `c8f192aaab5364e2e2689a518bb49add746b8abbdc67e31878b8403b0c7da84b`) and unzip it into `<Kenshi>/save/`. The script verifies the folder against `save-checksums.sha256` (every file's SHA-256 and the file count) before use, and refuses on a mismatch. You can check by hand:
 
 ```bash
 unzip bench-bases-2026-10-27.zip -d "$KENSHI_PATH/save/"
