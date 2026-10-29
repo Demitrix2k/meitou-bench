@@ -39,6 +39,18 @@
     return Math.abs(v) >= 100 ? String(Math.round(v)) : String(Math.round(v * 10) / 10);
   }
   function short(c) { return c.slice(0, 8); }
+  // Commits are ordered by upstream history (D.commits is in that order), never by the date a run was made:
+  // a commit benchmarked late (a backfill) still sits where it belongs. cdate is the commit's own date.
+  function cdate(c) { return c.commit_date || c.date; }
+  function crank(c) { return D.commits.indexOf(c); }
+  function targetOf(c) { return D.targets.filter(function (t) { return t.commit === c.target; })[0]; }
+  // Version tag of a release target, e.g. v0.16.0; "" for a daily target or an off-target commit.
+  function ctag(c) {
+    var t = targetOf(c);
+    return t && t.kind === "release" && /^v?\d/.test(t.label) ? t.label : "";
+  }
+  // Dropdown label: commit date, version tag if any, then the short hash.
+  function clabel(c) { return cdate(c) + (ctag(c) ? " " + ctag(c) : "") + "  " + short(c.commit); }
   function mname(m) { return m.name || m.id; }
   // Platform of a machine: native = the Linux build on Linux, proton = the Windows build under Proton on Linux.
   var PLAT = { native: "Linux native", proton: "Linux Proton", windows: "Windows", macos: "macOS" };
@@ -471,31 +483,50 @@
     });
   }
 
-  // Machines x targets: which machine ran which benchmark target.
+  // Machines x commits: which machine ran which benchmark target. Columns are in upstream commit order; a
+  // code-identical variant shares the column of its target; off-target commits get their own faded column.
   function renderCoverage() {
     var host = document.getElementById("coverage");
     var cur = currentTarget();
-    var html = '<div class="tablewrap"><table class="cov"><thead><tr><th>Machine</th>';
+    var cols = [];
+    D.commits.forEach(function (c) {
+      var key = c.off_target || !c.target ? c.commit : c.target;
+      var col = cols.filter(function (x) { return x.key === key; })[0];
+      if (!col) { col = { key: key, c: c, t: c.off_target ? null : targetOf(c), off: !!c.off_target || !c.target, rank: crank(c) }; cols.push(col); }
+      if (c.target_exact) col.c = c;
+    });
     D.targets.forEach(function (t) {
-      html += '<th class="' + (t.kind === "release" ? "rel" : "") + '" title="' + esc(t.label + " (" + t.kind + ", " + t.date + ")") + '">' +
-        '<a class="sha" href="' + REPO + "/commit/" + esc(t.commit_full) + '">' + esc(t.commit) + "</a><br>" + esc(t.label) +
-        (t === cur ? "<br><b>current</b>" : "") + "</th>";
+      if (!cols.some(function (x) { return x.t === t; })) cols.push({ key: t.commit, c: null, t: t, off: false, rank: 1e9 });
+    });
+    cols.sort(function (x, y) { return x.rank - y.rank; });
+    var html = '<div class="tablewrap"><table class="cov"><thead><tr><th>Machine</th>';
+    cols.forEach(function (x) {
+      var full = x.t ? x.t.commit_full : x.c.commit_full, hash = x.t ? x.t.commit : x.c.commit;
+      var dt = x.c ? cdate(x.c) : x.t.date;
+      html += '<th class="' + (x.t && x.t.kind === "release" ? "rel " : "") + (x.off ? "offcol" : "") + '" title="' +
+        esc((x.t ? x.t.label + " (" + x.t.kind + ")" : "off-target commit, not a benchmark target") + ", commit date " + dt) + '">' +
+        esc(dt.slice(5)) + '<br><a class="sha" href="' + REPO + "/commit/" + esc(full) + '">' + esc(hash) + "</a><br>" +
+        (x.t ? esc(x.t.label) : "off-target") + (x.t === cur ? "<br><b>current</b>" : "") + "</th>";
     });
     html += "</tr></thead><tbody>";
     D.machines.forEach(function (m) {
       html += "<tr><td>" + mdot(m) + esc(mname(m)) + " " + platChip(m) + "</td>";
-      D.targets.forEach(function (t) {
-        var has = t.machines.indexOf(m.id) >= 0;
-        var variant = has && !D.rows.some(function (r) { return r.machine === m.id && r.commit_full === t.commit_full; });
-        html += '<td class="' + (has ? "yes" : "no") + '" title="' + (has ? (variant ? "code-identical commit counts for this target" : "benchmarked") : "not benchmarked") + '">' +
+      cols.forEach(function (x) {
+        var has, variant = false;
+        if (x.off) has = D.rows.some(function (r) { return r.machine === m.id && r.commit === x.c.commit; });
+        else {
+          has = x.t.machines.indexOf(m.id) >= 0;
+          variant = has && !D.rows.some(function (r) { return r.machine === m.id && r.commit_full === x.t.commit_full; });
+        }
+        html += '<td class="' + (has ? "yes" : "no") + (x.off ? " offcol" : "") + '" title="' + (has ? (variant ? "code-identical commit counts for this target" : "benchmarked") : "not benchmarked") + '">' +
           (has ? (variant ? "&#10003;*" : "&#10003;") : "&middot;") + "</td>";
       });
       html += "</tr>";
     });
     html += "</tbody></table></div>";
     var off = D.commits.filter(function (c) { return c.off_target; });
-    host.innerHTML = html + '<p class="muted small">Bold headers are release targets: anchor points every machine should run at least once. * = a different commit that is code-identical to the target (only docs, site, tests, .github, tools or *.md differ).' +
-      (off.length ? " Off-target commits (" + off.map(function (c) { return esc(c.commit); }).join(", ") + ") are shown faded in the charts and left out of comparisons between machines." : "") + "</p>";
+    host.innerHTML = html + '<p class="muted small">Columns are in upstream commit order (the date is the commit\'s own date). Bold headers are release targets: anchor points every machine should run at least once. * = a different commit that is code-identical to the target (only docs, site, tests, .github, tools or *.md differ).' +
+      (off.length ? " Faded columns are off-target commits (" + off.map(function (c) { return esc(c.commit); }).join(", ") + "): not benchmark targets, shown faded in the charts and left out of comparisons between machines." : "") + "</p>";
   }
 
   function renderStandard() {
@@ -533,7 +564,7 @@
       var link = c.commit_full ? REPO + "/commit/" + c.commit_full : null;
       var who = selectedMachines().filter(function (m) { return D.rows.some(function (r) { return r.commit === c.commit && r.machine === m.id; }); });
       var head = '<div class="tl-head"><h3>' + (link ? '<a class="sha" href="' + link + '">' + esc(c.commit) + "</a>" : '<span class="sha">' + esc(c.commit) + "</span>") +
-        '</h3><span class="when">' + esc(c.date) + (c.series != null ? " - " + esc(seriesName(c.series)) : "") + "</span>" +
+        '</h3><span class="when">' + esc(cdate(c)) + (ctag(c) ? " " + esc(ctag(c)) : "") + (c.date !== cdate(c) ? " (benchmarked " + esc(c.date) + ")" : "") + (c.series != null ? " - " + esc(seriesName(c.series)) : "") + "</span>" +
         (multi() ? '<span class="who">' + who.map(function (m) { return mdot(m) + esc(mname(m)); }).join(" ") + "</span>" : "") + "</div>";
       var tg = D.targets.filter(function (t) { return t.commit === c.target; })[0];
       var tinfo = c.off_target ? '<span class="chip off">off-target: not a benchmark target</span>'
@@ -585,6 +616,12 @@
     });
   }
 
+  // Commit date of the newest (by upstream order) commit this machine benchmarked.
+  function lastCommitDate(m) {
+    var last = null;
+    D.commits.forEach(function (c) { if (D.rows.some(function (r) { return r.commit === c.commit && r.machine === m.id; })) last = c; });
+    return last ? cdate(last) : m.last_date;
+  }
   function renderMachines() {
     var host = document.getElementById("machines");
     host.innerHTML = "";
@@ -604,7 +641,7 @@
         '<div class="mtitle">' + mdot(m) + "<b>" + esc(mname(m)) + "</b> " + handleLink(m) + " " + platChip(m) + (m.maintainer ? ' <span class="chip">maintainer</span>' : "") + "</div>" +
         '<div class="muted">' + esc(m.cpu) + "; " + esc(m.gpu) + "; " + esc(String(m.ram_gb)) + " GB RAM; " + esc(m.os) + "</div>" +
         "<div>Renders at <b>" + esc(m.resolution) + "</b> - " + m.commit_count + " benchmarked commit" + (m.commit_count === 1 ? "" : "s") +
-        ", last " + esc(m.last_date) + "</div>" +
+        ", newest " + esc(lastCommitDate(m)) + "</div>" +
         (m.notes ? '<div class="muted">' + esc(m.notes) + "</div>" : "");
       card.appendChild(body);
       host.appendChild(card);
@@ -671,14 +708,14 @@
   function cmpCommits(mid) {
     return D.commits.filter(function (c) {
       return D.rows.some(function (r) { return r.commit === c.commit && r.machine === mid; });
-    }).sort(function (x, y) { return (y.date + y.time).localeCompare(x.date + x.time); });
+    }).sort(function (x, y) { return crank(y) - crank(x); });   // newest first, by upstream commit order
   }
-  function cmpTime(c) { return Date.parse(c.date + "T" + (c.time || "00:00:00") + "Z"); }
-  // B for a given A: the newest commit benchmarked 12-24 h before A; else the newest older than 24 h; else the previous commit.
+  // Distance in days is between commit dates, not between the dates the benchmarks were run.
+  function cmpTime(c) { return Date.parse(cdate(c) + "T00:00:00Z"); }
+  // B for a given A: the newest older commit whose commit date is at least a day before A's; else the previous commit.
   function cmpOneDay(list, a) {
-    var H = 3600000, idx = list.indexOf(a), older = list.slice(idx + 1), t = cmpTime(a), i;
-    for (i = 0; i < older.length; i++) { var age = t - cmpTime(older[i]); if (age >= 12 * H && age <= 24 * H) return older[i]; }
-    for (i = 0; i < older.length; i++) { if (t - cmpTime(older[i]) > 24 * H) return older[i]; }
+    var idx = list.indexOf(a), older = list.slice(idx + 1);
+    for (var i = 0; i < older.length; i++) if (cmpTime(a) - cmpTime(older[i]) >= 86400000) return older[i];
     return older[0] || a;
   }
   function cmpDefaults(list) {
@@ -726,7 +763,7 @@
     function picker(label, key) {
       var l = el("label", { class: "cmp-pick" }, label + " ");
       var s = el("select");
-      list.forEach(function (c) { s.appendChild(el("option", { value: c.commit }, short(c.commit) + "  " + c.date + " " + (c.time || "").slice(0, 5))); });
+      list.forEach(function (c) { s.appendChild(el("option", { value: c.commit }, clabel(c))); });
       s.value = cmp[key];
       s.addEventListener("change", function () { cmp[key] = s.value; cmpUrl(); renderCompare(); });
       l.appendChild(s); return l;
@@ -756,8 +793,8 @@
     var ca = list.filter(function (c) { return c.commit === cmp.a; })[0], cb = list.filter(function (c) { return c.commit === cmp.b; })[0];
     if (!ca || !cb) return;
     var info = el("p", { class: "muted small" });
-    info.innerHTML = 'A: <a href="' + REPO + "/commit/" + esc(ca.commit_full) + '"><code>' + esc(short(ca.commit)) + "</code></a> " + esc(ca.date) +
-      ' &nbsp; B: <a href="' + REPO + "/commit/" + esc(cb.commit_full) + '"><code>' + esc(short(cb.commit)) + "</code></a> " + esc(cb.date) +
+    info.innerHTML = 'A: <a href="' + REPO + "/commit/" + esc(ca.commit_full) + '"><code>' + esc(short(ca.commit)) + "</code></a> " + esc(cdate(ca)) + (ctag(ca) ? " " + esc(ctag(ca)) : "") +
+      ' &nbsp; B: <a href="' + REPO + "/commit/" + esc(cb.commit_full) + '"><code>' + esc(short(cb.commit)) + "</code></a> " + esc(cdate(cb)) + (ctag(cb) ? " " + esc(ctag(cb)) : "") +
       ' &nbsp; <a href="' + REPO + "/compare/" + esc(cb.commit_full) + "..." + esc(ca.commit_full) + '">upstream changes between them</a>';
     host.appendChild(info);
     if (ca.commit === cb.commit) host.appendChild(el("p", { class: "muted" }, "A and B are the same commit."));

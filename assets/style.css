@@ -109,3 +109,4 @@ footer{padding:20px 16px 40px;font-size:.9rem}
 .chart .bl.tot{stroke-width:2.6;stroke-dasharray:6 3}
 .chart .bl.dashed{stroke-dasharray:4 3}
 .chart .bp.off{opacity:.35}
+.cov th.offcol,.cov td.offcol{opacity:.45}
