@@ -1,19 +1,46 @@
-:root{
-  --bg:#f7f8fa; --panel:#fff; --text:#1c2230; --muted:#5d6678; --line:#dfe3ea; --grid:#e8ebf0;
+/* Themes: custom properties on :root[data-theme]. "default" is the roadmap palette (warm dark brown). */
+:root,:root[data-theme="default"]{
+  color-scheme:dark;
+  --bg:#1c1613; --panel:#2a201b; --text:#eadfcb; --muted:#a8977f; --line:#3d312a; --grid:#33281f; --accent:#e07b45;
+  --m0:#6ea0ff; --m1:#f0a53c; --m2:#4ade80; --m3:#c084fc; --m4:#f472b6; --m5:#22d3ee; --m6:#a3e635; --m7:#a8a29e;
+  --bs:70%; --bl:65%;
+  --run1:#6ea0ff; --run2:#f0a53c; --brk:#7d6d5a; --good:#7fd09c; --bad:#f08b82; --link:#f0a070;
+  --panel-a:84%; --scrim:84%;
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:#f7f8fa; --panel:#ffffff; --text:#1c2230; --muted:#5d6678; --line:#dfe3ea; --grid:#e8ebf0; --accent:#2563eb;
   --m0:#2563eb; --m1:#d97706; --m2:#15803d; --m3:#9333ea; --m4:#db2777; --m5:#0891b2; --m6:#65a30d; --m7:#78716c;
   --bs:70%; --bl:42%;
   --run1:#2563eb; --run2:#d97706; --brk:#8a93a6; --good:#15803d; --bad:#b91c1c; --link:#1d4ed8;
+  --panel-a:88%; --scrim:78%;
 }
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:#10131a; --panel:#181c26; --text:#e6e9f0; --muted:#9aa3b5; --line:#2a3040; --grid:#232938;
-    --m0:#6ea0ff; --m1:#f0a53c; --m2:#4ade80; --m3:#c084fc; --m4:#f472b6; --m5:#22d3ee; --m6:#a3e635; --m7:#a8a29e;
-    --bs:70%; --bl:65%;
-    --run1:#6ea0ff; --run2:#f0a53c; --brk:#6c768b; --good:#4ade80; --bad:#f87171; --link:#8ab4ff;
-  }
+:root[data-theme="contrast"]{
+  color-scheme:dark;
+  --bg:#000000; --panel:#0b0b0b; --text:#ffffff; --muted:#d0d0d0; --line:#8a8a8a; --grid:#3a3a3a; --accent:#ffe600;
+  --m0:#5eb0ff; --m1:#ffb000; --m2:#3dff7a; --m3:#d58aff; --m4:#ff6ec7; --m5:#00f0ff; --m6:#d4ff3a; --m7:#d0d0d0;
+  --bs:90%; --bl:68%;
+  --run1:#5eb0ff; --run2:#ffb000; --brk:#bdbdbd; --good:#3dff7a; --bad:#ff7b72; --link:#8cd0ff;
+  --panel-a:96%; --scrim:92%;
+}
+:root[data-theme="ocean"]{
+  color-scheme:dark;
+  --bg:#0c1820; --panel:#132430; --text:#dcecf2; --muted:#8fa9b5; --line:#24404f; --grid:#1c3341; --accent:#35c2c9;
+  --m0:#5fb3ff; --m1:#f4b860; --m2:#52e0a0; --m3:#b79cff; --m4:#ff8fb1; --m5:#35e0e8; --m6:#b7e35a; --m7:#9fb3bd;
+  --bs:70%; --bl:65%;
+  --run1:#5fb3ff; --run2:#f4b860; --brk:#5d7886; --good:#52e0a0; --bad:#ff8f86; --link:#6fd0e0;
+  --panel-a:84%; --scrim:84%;
+}
+:root[data-theme="forest"]{
+  color-scheme:dark;
+  --bg:#121a14; --panel:#1c281f; --text:#e2ecd8; --muted:#97aa8f; --line:#30443a; --grid:#263629; --accent:#9ccc4a;
+  --m0:#6ea8ff; --m1:#f0b04a; --m2:#6fe08a; --m3:#c39bff; --m4:#f48fb8; --m5:#3ad6d0; --m6:#c6ea50; --m7:#a8b09f;
+  --bs:70%; --bl:65%;
+  --run1:#6ea8ff; --run2:#f0b04a; --brk:#66806d; --good:#6fe08a; --bad:#f2877e; --link:#b5de6a;
+  --panel-a:84%; --scrim:84%;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{margin:0;background:transparent;color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 .wrap{max-width:1080px;margin:0 auto;padding:0 16px}
 header.wrap{padding-top:28px}
 h1{font-size:1.9rem;margin:0 0 .4rem}
@@ -138,3 +165,23 @@ pre code{background:none;padding:0}
 .legend{margin:.5rem 0}
 @media (max-width:700px){h1{font-size:1.6rem}.box{padding:12px 14px}}
 .chart svg{max-width:100%;height:auto}
+
+/* Backdrop (same technique as the roadmap page): two cross-faded layers and a scrim of the page colour. */
+html{background:var(--bg)}
+.backdrop{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:var(--bg)}
+.backdrop div{position:absolute;inset:-32px;background-size:cover;background-position:center;filter:blur(3px) saturate(.9);opacity:0}
+.backdrop div.on{opacity:1}
+.backdrop::after{content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--bg) var(--scrim),transparent)}
+html[data-bg="none"] .backdrop div{display:none}
+html[data-bg="none"] .backdrop::after{display:none}
+@media (prefers-reduced-motion:no-preference){.backdrop div{transition:opacity 1.5s ease}}
+/* Panels are semi-opaque while a backdrop shows. */
+.box,.chart,.tl,.mcard,.ctl,.caveat,.bdchip,.cmp-quick button,select,#tip{background:color-mix(in srgb,var(--panel) var(--panel-a),transparent)}
+html[data-bg="none"] :is(.box,.chart,.tl,.mcard,.ctl,.caveat,.bdchip,.cmp-quick button,select,#tip){background:var(--panel)}
+#tip{background:var(--panel)!important}
+header.wrap,footer.wrap{text-shadow:0 1px 3px color-mix(in srgb,var(--bg) 80%,transparent)}
+.box{backdrop-filter:blur(2px)}
+.topbar{display:flex;justify-content:flex-end;gap:10px 14px;flex-wrap:wrap;padding:8px 0 0;font-size:.85rem}
+.topbar label{display:inline-flex;gap:6px;align-items:center;color:var(--muted)}
+.topbar select{font-size:.85rem;padding:2px 6px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}

@@ -6,9 +6,15 @@
 <title>Meitou daily benchmarks</title>
 <meta name="description" content="Daily performance benchmarks of Meitou, a reimplementation of Kenshi, with a summary of upstream changes between benchmarked commits.">
 <link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("meitou-theme"),b=localStorage.getItem("meitou-bg");if(t)document.documentElement.dataset.theme=t;if(b)document.documentElement.dataset.bg=b}catch(e){}</script>
 </head>
 <body>
+<div class="backdrop" aria-hidden="true"><div></div><div></div></div>
 <header class="wrap">
+  <div class="topbar" role="group" aria-label="Page appearance">
+    <label>Background <select id="opt-bg"><option value="rotate">Screenshots</option><option value="fixed">Fixed: current one</option><option value="none">None</option></select></label>
+    <label>Theme <select id="opt-theme"><option value="default">Default</option><option value="light">Light</option><option value="contrast">High contrast</option><option value="ocean">Ocean</option><option value="forest">Forest</option></select></label>
+  </div>
   <h1>Meitou daily benchmarks</h1>
   <p class="lead">Fixed benchmarks of <a href="https://github.com/VlcekM/MeitouClient">Meitou</a>, a C#/.NET Vulkan reimplementation of Kenshi,
   run after each upstream <code>master</code> update. <strong>Lower is better for every metric.</strong></p>

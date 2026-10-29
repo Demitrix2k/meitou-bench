@@ -932,3 +932,39 @@
       "Could not load data/bench.json (" + e + "). Serve the folder over http, e.g. python3 -m http.server."));
   });
 })();
+
+// Appearance: background (rotating Kenshi screenshots / fixed / none) and colour theme, remembered in localStorage.
+(function () {
+  var root = document.documentElement, N = 5, DIR = "assets/bg/bg-", box = document.querySelector(".backdrop");
+  var layers = box.children, cur = Math.floor(Math.random() * N), front = 0, timer = null;
+  var selBg = document.getElementById("opt-bg"), selTh = document.getElementById("opt-theme");
+  function get(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
+  function set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function url(i) { return DIR + (i + 1) + ".jpg"; }
+  function show(i) {
+    var back = layers[1 - front], img = new Image();
+    img.onload = function () {
+      back.style.backgroundImage = "url(" + url(i) + ")";
+      back.classList.add("on"); layers[front].classList.remove("on");
+      front = 1 - front; cur = i;
+    };
+    img.src = url(i);
+  }
+  function nextIdx() { var n = Math.floor(Math.random() * (N - 1)); return n >= cur ? n + 1 : n; }
+  function applyBg(mode) {
+    if (!{ rotate: 1, fixed: 1, none: 1 }[mode]) mode = "rotate";
+    root.dataset.bg = mode; selBg.value = mode;
+    clearInterval(timer); timer = null;
+    if (mode === "none") return;                       // nothing is fetched
+    if (!layers[front].classList.contains("on")) show(cur);   // only the current image
+    if (mode === "rotate") timer = setInterval(function () { if (!document.hidden) show(nextIdx()); }, 20000);
+  }
+  function applyTheme(t) {
+    if (!{ "default": 1, light: 1, contrast: 1, ocean: 1, forest: 1 }[t]) t = "default";
+    root.dataset.theme = t; selTh.value = t;
+  }
+  selBg.addEventListener("change", function () { set("meitou-bg", selBg.value); applyBg(selBg.value); });
+  selTh.addEventListener("change", function () { set("meitou-theme", selTh.value); applyTheme(selTh.value); });
+  applyTheme(get("meitou-theme", "default"));
+  applyBg(get("meitou-bg", "rotate"));
+})();
