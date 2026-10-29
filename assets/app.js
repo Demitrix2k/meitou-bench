@@ -838,14 +838,28 @@
     bar.appendChild(picker("A (new)", "a"));
     bar.appendChild(picker("B (baseline)", "b"));
     var quick = el("span", { class: "cmp-quick" });
-    [["vs previous benchmark", 0], ["vs ~1 day", 1], ["vs ~1 week", 7]].forEach(function (q) {
-      var btn = el("button", { type: "button" }, q[0]);
-      btn.addEventListener("click", function () {
-        var c = q[1] === 1 ? cmpOneDay(list, list.filter(function (x) { return x.commit === cmp.a; })[0]) : q[1] ? cmpAgo(list, q[1]) : list[Math.max(0, list.map(function (x) { return x.commit; }).indexOf(cmp.a)) + 1];
-        if (c) { cmp.b = c.commit; cmpUrl(); renderCompare(); }
-      });
-      quick.appendChild(btn);
+    var prev = el("button", { type: "button" }, "vs previous benchmark");
+    prev.addEventListener("click", function () {
+      var c = list[Math.max(0, list.map(function (x) { return x.commit; }).indexOf(cmp.a)) + 1];
+      if (c) { cmp.b = c.commit; cmpUrl(); renderCompare(); }
     });
+    quick.appendChild(prev);
+    // B = the newest commit at least N days or weeks older than A (by commit date); the oldest one when none is that old.
+    var ago = el("span", { class: "cmp-ago" });
+    var num = el("input", { type: "number", min: "1", step: "1", value: String(cmp.agoN || 1), "aria-label": "how many days or weeks back" });
+    var unit = el("select", { "aria-label": "days or weeks" });
+    [["days", 1], ["weeks", 7]].forEach(function (u) { var o = el("option", { value: String(u[1]) }, u[0]); if ((cmp.agoUnit || 1) === u[1]) o.selected = true; unit.appendChild(o); });
+    var go = el("button", { type: "button" }, "ago");
+    function applyAgo() {
+      var n = Math.max(1, Math.floor(Number(num.value) || 1));
+      cmp.agoN = n; cmp.agoUnit = Number(unit.value);
+      var c = cmpAgo(list, n * cmp.agoUnit);
+      if (c) { cmp.b = c.commit; cmpUrl(); renderCompare(); }
+    }
+    go.addEventListener("click", applyAgo);
+    num.addEventListener("keydown", function (e) { if (e.key === "Enter") applyAgo(); });
+    ago.appendChild(document.createTextNode("vs ")); ago.appendChild(num); ago.appendChild(unit); ago.appendChild(go);
+    quick.appendChild(ago);
     bar.appendChild(quick);
     host.appendChild(bar);
 
