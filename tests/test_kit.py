@@ -89,6 +89,30 @@ class Launch(unittest.TestCase):
         self.assertEqual(bench.key_plan("bases"), [("idle", 1, "2"), ("idle", 6, "1"), ("return", 1, "2"), ("return", 6, "1")])
         self.assertEqual(bench.key_plan("play"), [])
 
+    def test_segment_started(self):
+        self.assertTrue(bench.segment_started("x\nbench     idle (10 s)\n", "idle"))
+        self.assertTrue(bench.segment_started("bench     return (10 s)\r\n", "return"))
+        self.assertFalse(bench.segment_started("bench     idle (10 s)\n", "return"))
+        self.assertFalse(bench.segment_started("the bench     idle (10 s)\n", "idle"))
+
+    def test_run_output_sources(self):
+        with tempfile.TemporaryDirectory() as d:
+            gl, lt = os.path.join(d, "game.log"), os.path.join(d, "log.txt")
+            open(lt, "w").write("==== old run\nbench     idle (10 s)\n")   # an earlier run, appended to by this one
+            src = [(gl, 0), (lt, bench.log_offset(lt))]
+            self.assertFalse(bench.segment_started(bench.read_run_output(src), "idle"))   # old lines are not this run's
+            open(gl, "w").write("")                                       # Proton: game.log stays empty
+            open(lt, "a").write("bench     warm\nbench     idle (10 s)\n")
+            self.assertTrue(bench.segment_started(bench.read_run_output(src), "idle"))
+            self.assertFalse(bench.segment_started(bench.read_run_output(src), "return"))
+            open(lt, "w").write("bench     return (10 s)\n")               # log.txt cut below the offset: read from its start
+            self.assertTrue(bench.segment_started(bench.read_run_output(src), "return"))
+            os.remove(lt)                                                  # missing file: empty, no error
+            self.assertEqual(bench.read_run_output(src), "")
+            self.assertEqual(bench.log_offset(lt), 0)
+            open(gl, "w").write("bench     idle (10 s)\n")                  # native: game.log has it
+            self.assertTrue(bench.segment_started(bench.read_run_output(src), "idle"))
+
     def test_mangohud_config(self):
         c = bench.mangohud_config("/d", 60, "0000:01:00.0", "fps\nno_display=1\nlog_duration=5\n")
         self.assertIn("pci_dev=0000:01:00.0", c); self.assertIn("fps", c)

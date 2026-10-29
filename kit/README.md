@@ -18,7 +18,7 @@ Total game time is about 8 minutes (plus about 35 s of loading per run).
 | platform (`platform` column) | status |
 |---|---|
 | Linux native (`native`) | Ran end to end once (2026-10-29, CachyOS, RTX 3070 Laptop, commit `0d95057f`): save download and check, `build.py`, `bench.py`, both scenarios twice; play numbers in line with the maintainer's daily rows. The metric and breakdown columns are also unit tested against the maintainer's saved runs. |
-| Linux with Proton (`proton`) | Ran once (same day and machine): the play benchmark works; the **base switch does not**, because no keys are sent under Proton (the Windows build's console output does not reach `game.log`, so the kit never sees the save loaded). Skip `--scenario bases` with Proton until this is fixed. |
+| Linux with Proton (`proton`) | Ran once (same day and machine): the play benchmark works; the base switch sent no keys then, because the Windows build's console output does not reach `game.log` under Proton. **Fixed in code, not yet verified by a run:** the kit now also reads `log.txt` next to the executable, where the game always writes its output. |
 | Windows (`windows`) | **Untested.** Command construction and the hardware probe are unit tested with simulated output only; building, starting the game and sending keys have never run on Windows. Contributors welcome: please report what works and what does not (an issue, or a note in your results). |
 | macOS (`macos`) | **Untested**, and Meitou's macOS support is itself young (see "macOS" below). Contributors welcome. |
 
@@ -109,7 +109,7 @@ python3 bench.py
 | Windows | `MeitouClient.exe --windowed --load <copy> --play-bench <dir>` from the build folder | `SendInput` with scan codes, window brought to the front by PID | none | PowerShell `Get-CimInstance` (`Win32_Processor`, `Win32_VideoController`, `Win32_OperatingSystem`) |
 | macOS | `./MeitouClient --windowed ... --renderer vulkan` with `DYLD_LIBRARY_PATH` (Vulkan loader) and `MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS=1` | `CGEventPost` (needs Accessibility permission), window to the front with `osascript` | none | `sysctl`, `sw_vers`, `system_profiler SPDisplaysDataType` |
 
-On every OS the script reads the game's output (`game.log`) to learn when the `idle` and `return` segments start, so the key presses land at 1 s and 6 s into them. If the game's console output does not reach `game.log` (not checked on Windows, where the game is a GUI program), no keys are sent and `run.txt` says `keys sent: 0 of 4`; the play scenario is not affected.
+On every OS the script reads the game's output to learn when the `idle` and `return` segments start, so the key presses land at 1 s and 6 s into them. It reads two files: `game.log` (the captured console, empty or partial for the Windows build under Proton) and `log.txt` next to the game executable (the game always writes its output there, appended across runs; the kit reads only what was added since the start of the run, and keeps that part as `log-txt-this-run.txt` in the run folder). Either one showing the `bench     idle (` line is enough, so Windows and macOS do not depend on console capture. If neither shows it, no keys are sent and `run.txt` says `keys sent: 0 of 4` with a warning; the play scenario is not affected. Needs a build with `log.txt` (upstream master of 2026-10); an old build without it works only where `game.log` gets the output.
 
 ## Submit your results
 

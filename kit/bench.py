@@ -204,19 +204,44 @@ def spawn(launch, log_path, osname):
         log.close()
 
 
-def key_driver(proc, log_path, scen, keys, steps_path, osname, stop):
-    """Follows the benchmark's segment lines in game.log; at the right moments sends the double taps. Runs in a thread."""
+def log_offset(path):
+    """Size of a log file now (0 if it does not exist): where this run's own lines start in a file that is appended to across runs."""
+    try:
+        return os.path.getsize(path)
+    except OSError:
+        return 0
+
+
+def read_run_output(sources):
+    """The game's output of this run: the text of every (path, start offset) in sources joined. A source that is missing counts as empty; one that is
+    now shorter than its offset (the game cuts the oldest lines of a big log.txt) is read from its start. Never raises."""
+    parts = []
+    for path, start in sources:
+        try:
+            with open(path, "rb") as f:
+                f.seek(0, os.SEEK_END)
+                f.seek(start if start <= f.tell() else 0)
+                parts.append(f.read().decode("utf-8", errors="replace"))
+        except OSError:
+            pass
+    return "\n".join(parts)
+
+
+def segment_started(text, seg):
+    """True when the play benchmark's line announcing segment `seg` ("bench     idle (10 s)") is in text. The game writes it to its console (game.log
+    on Linux) and, always, to log.txt next to the executable; under Proton only log.txt gets it. Lines that tee into log.txt may be prefixed by nothing, but a
+    leading timestamp or CR is tolerated."""
+    return re.search(r"^[\r ]*bench\s+" + re.escape(seg) + r" \(", text, re.M) is not None
+
+
+def key_driver(proc, sources, scen, keys, steps_path, osname, stop):
+    """Follows the benchmark's segment lines in the game's output (see read_run_output); at the right moments sends the double taps. Runs in a thread."""
     for seg in ("idle", "return"):
-        pat = re.compile(r"^bench\s+" + seg + r" \(", re.M)
         while True:
             if stop.is_set() or proc.poll() is not None:
                 return
-            try:
-                with open(log_path, encoding="utf-8", errors="replace") as f:
-                    if pat.search(f.read()):
-                        break
-            except OSError:
-                pass
+            if segment_started(read_run_output(sources), seg):
+                break
             time.sleep(0.2)
         t0 = time.time()
         for s, at, key in key_plan(scen):
@@ -432,10 +457,13 @@ def main(argv):
                     f.write(f"started {datetime.now().astimezone().isoformat(timespec='seconds')} data=gog platform={plat}\ncd {build_dir}\nenv {envs}\n{shown}\n")
                 print(f"== {scen} run {k}: {run_name}")
                 log_path, t0 = os.path.join(mdir, "game.log"), time.time()
+                # The Windows build always writes log.txt next to the exe (appended across runs); under Proton its console output never reaches game.log.
+                game_txt = os.path.join(build_dir, "log.txt")
+                sources = [(log_path, 0), (game_txt, log_offset(game_txt))]
                 proc = spawn(launch, log_path, osname)
                 stop, kthread = threading.Event(), None
                 if scen == "bases":
-                    kthread = threading.Thread(target=key_driver, args=(proc, log_path, scen, keys, os.path.join(mdir, "steps.log"), osname, stop), daemon=True)
+                    kthread = threading.Thread(target=key_driver, args=(proc, sources, scen, keys, os.path.join(mdir, "steps.log"), osname, stop), daemon=True)
                     kthread.start()
                 timed_out = False
                 try:
@@ -448,6 +476,8 @@ def main(argv):
                 if kthread: kthread.join(5)
                 proc = None
                 secs = int(time.time() - t0)
+                if os.path.isfile(game_txt):   # this run's part of log.txt, kept with the run (the only copy of the game's output under Proton)
+                    open(os.path.join(mdir, "log-txt-this-run.txt"), "w", encoding="utf-8").write(read_run_output([sources[1]]))
                 lines = [f"exit={rc} seconds={secs}{' timedout' if timed_out else ''}"]
                 if use_mh:
                     g = next((re.sub(r"^.*\] ", "", l) for l in open(log_path, encoding="utf-8", errors="replace") if re.search(r"MANGOHUD.*active GPU", l)), "")
@@ -457,6 +487,8 @@ def main(argv):
                     sl = os.path.join(mdir, "steps.log")
                     n = sum(1 for l in open(sl, encoding="utf-8")) if os.path.isfile(sl) else 0
                     lines.append(f"keys sent: {n} of 4")
+                    if n == 0 and not segment_started(read_run_output(sources), "idle"):
+                        lines.append("WARNING no 'bench     idle (' line in game.log or in log.txt next to the executable: the game's output was not seen")
                 if not os.path.isfile(os.path.join(run_dir, "bench", "frames.csv")):
                     lines.append("FAILED no bench/frames.csv"); fails += 1
                 open(os.path.join(run_dir, "run.txt"), "w", encoding="utf-8").write("\n".join(lines) + "\n")
