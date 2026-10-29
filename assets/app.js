@@ -59,6 +59,7 @@
   function mcolor(m) { return "var(--m" + (D.machines.indexOf(m) % 8) + ")"; }
   function mdot(m) { return '<span class="dot" style="background:' + mcolor(m) + '"></span>'; }
   function handleLink(m) {
+    if (!m.github) return "";
     return '<a href="https://github.com/' + encodeURIComponent(m.github) + '">@' + esc(m.github) + "</a>";
   }
   function machineById(id) { return D.machines.filter(function (m) { return m.id === id; })[0]; }
@@ -377,6 +378,8 @@
     sec.appendChild(box);
     if (!avail.length) { box.appendChild(el("p", { class: "muted" }, "No stage timings for the selected machines.")); return; }
     var mc = avail.filter(function (x) { return x.id === state.bdMachine; })[0] || avail[0];
+    var nobd = selectedMachines().filter(function (x) { return avail.indexOf(x) < 0; });
+    if (nobd.length) box.appendChild(el("p", { class: "muted small" }, "No stage timings for: " + nobd.map(mname).join(", ") + " (results from an older kit, without them)."));
     var tb = el("div", { class: "toolbar" });
     if (avail.length > 1) {
       var ms = el("select"); avail.forEach(function (x) { var o = el("option", { value: x.id }, mname(x)); if (x === mc) o.selected = true; ms.appendChild(o); });
@@ -522,14 +525,14 @@
       var any = found.ms.some(function (m) { return targetRows(m, found.t, sid).length; });
       if (!any) return;
       var html = "<h3>" + esc(D.scenarios[sid].title) + "</h3>" +
-        '<div class="tablewrap"><table><thead><tr><th>Machine</th><th>Platform</th><th>GPU</th><th>Resolution</th><th>Commit</th><th>Runs shown</th>';
+        '<div class="tablewrap"><table><thead><tr><th>Machine</th><th>Platform</th><th>GPU</th><th>Resolution</th><th>Runs shown</th>';
       ALLM.forEach(function (mt) { html += "<th>" + esc(mt.label) + "</th>"; });
       html += "</tr></thead><tbody>";
       found.ms.forEach(function (m) {
         var all = targetRows(m, found.t, sid), rs = pick(all);
         if (!rs.length) return;
         html += "<tr><td>" + mdot(m) + esc(mname(m)) + " " + handleLink(m) + "</td><td>" + platChip(m) + "</td><td>" + esc(m.gpu) + "</td><td>" + esc(m.resolution) +
-          "</td><td><span class=\"sha\">" + esc(all[0].commit) + "</span></td><td>" + rs.map(function (r) { return "run " + r.run; }).join(", ") + "</td>";
+          "</td><td>" + rs.map(function (r) { return "run " + r.run; }).join(", ") + (all[0].commit !== found.t.commit ? " (commit " + esc(all[0].commit) + ")" : "") + "</td>";
         ALLM.forEach(function (mt) {
           html += "<td>" + rs.map(function (r) { return fmt(r.metrics[mt.key]); }).join(" / ") + "</td>";
         });
@@ -705,6 +708,35 @@
     });
   }
 
+  // Machine picker next to the charts: one checkbox per machine (the cards in "Machines" below do the same); at least one stays selected.
+  function renderPicker() {
+    var host = document.getElementById("mpick");
+    if (!host) return;
+    host.innerHTML = "<legend>Machines shown</legend>";
+    var row = el("div", { class: "mpick-row" });
+    D.machines.forEach(function (m) {
+      var l = el("label", { class: "mpick-item", title: m.cpu + "; " + m.gpu + "; " + m.resolution }), cb = el("input", { type: "checkbox" });
+      cb.checked = !!state.selected[m.id];
+      cb.addEventListener("change", function () {
+        state.selected[m.id] = cb.checked;
+        if (!selectedMachines().length) { state.selected[m.id] = true; cb.checked = true; }
+        renderResults();
+      });
+      l.appendChild(cb);
+      l.insertAdjacentHTML("beforeend", " " + mdot(m) + esc(mname(m)) + " " + platChip(m));
+      row.appendChild(l);
+    });
+    host.appendChild(row);
+    var q = el("p", { class: "muted small" });
+    q.appendChild(document.createTextNode("Tick the machines to draw; each has its own colour in the charts. "));
+    [["All", function () { return true; }], ["Only the first", function (m, i) { return i === 0; }]].forEach(function (o) {
+      var b = el("button", { type: "button", class: "linkbtn" }, o[0]);
+      b.addEventListener("click", function () { D.machines.forEach(function (m, i) { state.selected[m.id] = o[1](m, i); }); renderResults(); });
+      q.appendChild(b); q.appendChild(document.createTextNode(" "));
+    });
+    host.appendChild(q);
+  }
+
   function renderControls() {
     var host = document.getElementById("controls");
     host.innerHTML = "";
@@ -722,6 +754,8 @@
     host.appendChild(runs);
 
     if (multi()) {
+      host.appendChild(el("fieldset", { class: "ctl ctl-wide", id: "mpick" }));
+      renderPicker();
       var rel = el("fieldset", { class: "ctl" });
       rel.innerHTML = "<legend>Compare machines</legend>";
       var l = el("label"), cb = el("input", { type: "checkbox" });
@@ -792,6 +826,7 @@
   }
   function cmpUrl() {
     var q = [];
+    if (/[?&]demo=1(&|$)/.test(location.search)) q.push("demo=1");   // keep demo mode across the address updates
     if (cmp.a) q.push("a=" + encodeURIComponent(cmp.a));
     if (cmp.b) q.push("b=" + encodeURIComponent(cmp.b));
     if (multi() && cmp.m) q.push("m=" + encodeURIComponent(cmp.m));
@@ -911,7 +946,7 @@
   }
 
   function renderResults() {
-    renderMachines(); renderCaveat(); renderCoverage(); renderSameCommit(); renderHeadline(); renderScenarios(); renderTimeline();
+    renderPicker(); renderMachines(); renderCaveat(); renderCoverage(); renderSameCommit(); renderHeadline(); renderScenarios(); renderTimeline();
   }
 
   function init(d) {
@@ -932,7 +967,18 @@
   }
   window.addEventListener("hashchange", openHash);
 
-  fetch("data/bench.json").then(function (r) { return r.json(); }).then(init).catch(function (e) {
+  // ?demo=1 loads data/demo/bench.json (fake machines from tools/make_demo_data.py; git-ignored, so absent on the live site) and shows a banner.
+  // Without that file, or without ?demo=1, the real data is loaded and nothing else changes.
+  function loadData() {
+    var real = function () { return fetch("data/bench.json").then(function (r) { return r.json(); }); };
+    if (!/[?&]demo=1(&|$)/.test(location.search)) return real();
+    return fetch("data/demo/bench.json").then(function (r) { if (!r.ok) throw new Error("no demo data"); return r.json(); }).then(function (d) {
+      var b = el("div", { class: "demo-banner", role: "alert" }, "DEMO DATA - not real results. Fake machines for testing the page.");
+      document.body.insertBefore(b, document.body.firstChild);
+      return d;
+    }, real);
+  }
+  loadData().then(init).catch(function (e) {
     document.getElementById("scenarios").appendChild(el("p", { class: "box" },
       "Could not load data/bench.json (" + e + "). Serve the folder over http, e.g. python3 -m http.server."));
   });
