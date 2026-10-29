@@ -14,16 +14,18 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
 header.wrap{padding-top:28px}
 h1{font-size:1.9rem;margin:0 0 .4rem}
 h2{font-size:1.35rem;margin:1.6rem 0 .5rem}
 h3{font-size:1.05rem;margin:0}
 a{color:var(--link)}
 code{font:.9em ui-monospace,Menlo,Consolas,monospace;background:var(--grid);padding:.05em .3em;border-radius:4px}
-.lead{max-width:70ch;color:var(--text)}
+.lead{color:var(--text);font-size:1.05rem}
 .muted{color:var(--muted)}
+main > *{max-width:100%}
 .box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:16px 0}
+main > section > h2{margin-top:2rem}
 .box h2{margin-top:.2rem}
 .setup{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 24px;margin:.6rem 0}
 .setup dt{font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
@@ -38,7 +40,7 @@ select{font:inherit;color:var(--text);background:var(--panel);border:1px solid v
 .chart{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 10px 4px;min-width:0}
 .chart h3{font-size:.95rem;padding:0 4px}
 .chart svg{display:block;overflow:visible}
-.chart text{fill:var(--muted);font-size:12px}
+.chart text{fill:var(--muted);font-size:12.5px}
 .chart .grid{stroke:var(--grid);stroke-width:1}
 .chart .brk{stroke:var(--brk);stroke-dasharray:4 3;stroke-width:1}
 .chart .hit{fill:transparent;cursor:pointer}
@@ -49,8 +51,9 @@ th:first-child,td:first-child{text-align:left;white-space:normal}
 th{color:var(--muted);font-weight:600;font-size:.8rem}
 .tablewrap{overflow-x:auto}
 .good{color:var(--good)} .bad{color:var(--bad)}
-.scen{margin:28px 0}
-.scen h2{margin-bottom:0}
+.scen{margin:20px 0}
+.scen-h{margin:0 0 .5rem;font-size:1.1rem}
+.scen-h .muted{font-weight:400;font-size:.92rem}
 .tl{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:12px 0}
 .tl-head{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
 .tl-head .when{color:var(--muted);font-size:.9rem}
@@ -74,7 +77,7 @@ footer{padding:20px 16px 40px;font-size:.9rem}
 .ctl{flex:1 1 320px;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:8px 14px;margin:0}
 .ctl legend{font-weight:600;padding:0 6px}
 .ctl label{display:block;margin:2px 0}
-.small{font-size:.85rem;margin:.4rem 0 .2rem}
+.small{font-size:.9rem;margin:.4rem 0 .2rem}
 .reflab{margin-left:1.5rem}
 .caveat{border:1px solid var(--bad);border-radius:10px;padding:8px 14px;background:var(--panel);margin:8px 0}
 #samecommit h3{margin:.8rem 0 .3rem}
@@ -110,3 +113,28 @@ footer{padding:20px 16px 40px;font-size:.9rem}
 .chart .bl.dashed{stroke-dasharray:4 3}
 .chart .bp.off{opacity:.35}
 .cov th.offcol,.cov td.offcol{opacity:.45}
+
+.hl{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:12px}
+.hl .box{margin:0}
+.hlcard h3{margin-bottom:.5rem}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile .l{font-size:.82rem;color:var(--muted)}
+.tile .v{font-size:1.5rem;font-weight:700;line-height:1.2}
+.tile .v small{font-size:.8rem;font-weight:400;color:var(--muted);margin-left:2px}
+.tile .d{font-size:.9rem;min-height:1.4em}
+#headline details.box{margin:12px 0 0}
+#headline details .box{border:0;padding:6px 0;margin:6px 0}
+.method h3{margin:1.2rem 0 .3rem}
+.method > summary,#coverage-det > summary{font-size:1.15rem}
+.method > summary{padding:2px 0}
+.howto{margin:.4rem 0}
+pre{margin:.5rem 0;padding:8px 12px;overflow-x:auto;background:var(--grid);border-radius:8px}
+pre code{background:none;padding:0}
+.mcard.compact{display:block}
+.mcard.compact .mbody > div{display:inline}
+.mcard.compact .mbody > div + div::before{content:" \00b7  ";color:var(--muted)}
+#machines:has(.compact){display:block}
+.legend{margin:.5rem 0}
+@media (max-width:700px){h1{font-size:1.6rem}.box{padding:12px 14px}}
+.chart svg{max-width:100%;height:auto}

@@ -373,7 +373,7 @@
   function bdSection(sec, scen, commits) {
     var avail = D.machines.filter(function (mc) { return state.selected[mc.id] && D.rows.some(function (r) { return r.machine === mc.id && r.scenario === scen && r.breakdown; }); });
     var box = el("div", { class: "bd" });
-    box.appendChild(el("h3", {}, "Where the frame time goes (stages of the game's F12 profiler)"));
+    box.appendChild(el("h3", {}, D.scenarios[scen].title));
     sec.appendChild(box);
     if (!avail.length) { box.appendChild(el("p", { class: "muted" }, "No stage timings for the selected machines.")); return; }
     var mc = avail.filter(function (x) { return x.id === state.bdMachine; })[0] || avail[0];
@@ -413,32 +413,81 @@
     box.appendChild(grid);
     bdChart(grid, "cpu", scen, commits, mc, rowsAll);
     bdChart(grid, "gpu", scen, commits, mc, rowsAll);
-    box.appendChild(el("p", { class: "muted" }, "Same stages and names as the F12 profiler. CPU is the render thread's time per stage (uploads, cull and bake have no CPU line); " +
-      "GPU is measured with timestamp queries (driver-wait has no GPU line; \"other\" is GPU time outside the stamped stages). " +
-      "The CPU and GPU lines are of the same frames but run in parallel, so they do not add up to the frame time. Values are per-stage distributions over the frames after the settle phase. Click a name to show or hide its line."));
   }
 
   function renderScenarios() {
-    var host = document.getElementById("scenarios");
-    host.innerHTML = "";
+    var host = document.getElementById("scenarios"), bhost = document.getElementById("breakdown");
+    host.innerHTML = ""; bhost.innerHTML = "";
     var commits = commitsShown();
     if (!commits.length) { host.appendChild(el("p", { class: "box muted" }, "No machine selected.")); return; }
+    host.appendChild(legend());
     Object.keys(D.scenarios).forEach(function (sid) {
       var sc = D.scenarios[sid];
       var sec = el("section", { class: "scen" });
-      sec.appendChild(el("h2", {}, sc.title));
-      sec.appendChild(el("p", { class: "muted" }, sc.subtitle));
-      sec.appendChild(legend());
+      var h = el("h3", { class: "scen-h" }, sc.title);
+      h.appendChild(el("span", { class: "muted" }, " - " + sc.subtitle));
+      sec.appendChild(h);
       var grid = el("div", { class: "charts" });
       sec.appendChild(grid);
       host.appendChild(sec);
       METRICS.forEach(function (mt) { chart(grid, mt, sid, commits); });
-      bdSection(sec, sid, commits);
-      selectedMachines().forEach(function (mc) {
-        var s = summaryFor(sid, commits, mc);
-        if (s) sec.appendChild(s);
+      var bsec = el("section", { class: "scen" });
+      bhost.appendChild(bsec);
+      bdSection(bsec, sid, commits);
+    });
+  }
+
+  // Headline strip: the newest benchmarked commit against the one before it (upstream order), for the primary selected machine.
+  var TILES = [["over33_pct", "Frames over 33 ms", "%"], ["p99_ms", "p99 frame time", " ms"], ["p50_ms", "p50 frame time", " ms"], ["slow_world_p99_ms", "Slow-world tick p99", " ms"]];
+  function renderHeadline() {
+    var host = document.getElementById("headline");
+    host.innerHTML = "";
+    var commits = commitsShown(), sel = selectedMachines();
+    var mc = sel.filter(function (m) { return m.maintainer; })[0] || sel[0];
+    if (!mc) return;
+    var shown = commits.filter(function (c) { return D.rows.some(function (r) { return r.commit === c.commit && r.machine === mc.id; }); });
+    var cur = shown[shown.length - 1], prev = shown[shown.length - 2];
+    if (!cur) return;
+    var cap = el("p", { class: "muted" });
+    cap.innerHTML = 'Newest benchmarked commit <a class="sha" href="' + REPO + "/commit/" + esc(cur.commit_full) + '">' + esc(cur.commit) + "</a> (" + esc(cdate(cur)) + (ctag(cur) ? " " + esc(ctag(cur)) : "") + ")" +
+      (prev ? ' against the previous one, <a class="sha" href="' + REPO + "/commit/" + esc(prev.commit_full) + '">' + esc(prev.commit) + "</a> (" + esc(cdate(prev)) + ")" : "") +
+      (multi() ? ", " + esc(mname(mc)) : "") + ". Green or red marks the change only; lower is better. Single runs are noisy: small changes are not colored.";
+    host.appendChild(cap);
+    var strip = el("div", { class: "hl" });
+    function one(c, sid) {
+      var rs = pick(rowsFor(mc, c.commit, sid));
+      return rs[0] || null;
+    }
+    Object.keys(D.scenarios).forEach(function (sid) {
+      var b = one(cur, sid), a = prev ? one(prev, sid) : null;
+      var card = el("div", { class: "box hlcard" });
+      card.appendChild(el("h3", {}, D.scenarios[sid].title));
+      if (!b) { card.appendChild(el("p", { class: "muted" }, "Not measured for this commit.")); strip.appendChild(card); return; }
+      var tiles = el("div", { class: "tiles" });
+      TILES.forEach(function (t) {
+        var v = b.metrics[t[0]], pv = a ? a.metrics[t[0]] : null, d = "", cls = "";
+        if (v != null && pv != null) {
+          var dd = v - pv, pct = pv ? dd / pv * 100 : null, rd = Math.round(dd * 10) / 10;
+          cls = rd === 0 || Math.abs(pct == null ? dd : pct) < 2 ? "" : dd < 0 ? "good" : "bad";
+          d = (dd > 0 ? "+" : "") + fmt(dd) + (pct == null ? "" : " (" + (pct > 0 ? "+" : "") + Math.round(pct) + "%)");
+        } else if (!a) d = "no previous";
+        var tile = el("div", { class: "tile" });
+        tile.innerHTML = '<div class="l">' + esc(t[1]) + '</div><div class="v">' + fmt(v) + '<small>' + esc(t[2]) + '</small></div><div class="d ' + cls + '">' + esc(d) + "</div>";
+        tiles.appendChild(tile);
+      });
+      card.appendChild(tiles);
+      strip.appendChild(card);
+    });
+    host.appendChild(strip);
+    var det = el("details", { class: "box" });
+    det.appendChild(el("summary", {}, "All metrics, latest vs previous"));
+    sel.forEach(function (m) {
+      Object.keys(D.scenarios).forEach(function (sid) {
+        var t = summaryFor(sid, commits, m);
+        if (t) { t.classList.add("flat"); var h = t.querySelector("h3"); if (h) h.textContent = D.scenarios[sid].title + " - " + h.textContent; det.appendChild(t); }
       });
     });
+    host.appendChild(det);
   }
 
   // Latest benchmark target that at least two selected machines ran. Off-target commits are not compared.
@@ -533,8 +582,8 @@
     var cur = currentTarget();
     document.getElementById("standard").innerHTML =
       "<b>Current standard:</b> <a class=\"sha\" href=\"" + REPO + "/commit/" + esc(cur.commit_full) + "\">" + esc(cur.commit) + "</a> (" + esc(cur.label) + ", " + esc(cur.date) + "). " +
-      "Everyone benchmarks the same commits so results can be compared. To add your machine: <code>cd kit &amp;&amp; python3 build.py &amp;&amp; python3 bench.py --machine &lt;id&gt;</code> (Linux, Windows, macOS) " +
-      "(builds the current standard by default; see CONTRIBUTING.md).";
+      "Everyone benchmarks the same commits so results can be compared. To add your machine (Linux, Windows, macOS; builds the current standard by default, see CONTRIBUTING.md):" +
+      "<pre><code>cd kit &amp;&amp; python3 build.py &amp;&amp; python3 bench.py --machine &lt;id&gt;</code></pre>";
   }
 
   function metricsTable(commit) {
@@ -626,7 +675,7 @@
     var host = document.getElementById("machines");
     host.innerHTML = "";
     D.machines.forEach(function (m) {
-      var card = el("label", { class: "mcard" });
+      var card = el("label", { class: "mcard" + (multi() ? "" : " compact") });
       var cb = el("input", { type: "checkbox" });
       cb.checked = !!state.selected[m.id];
       if (!multi()) cb.hidden = true;
@@ -659,7 +708,9 @@
       r.addEventListener("change", function () { state.runMode = o[0]; renderResults(); });
       l.appendChild(r); l.appendChild(document.createTextNode(" " + o[1])); runs.appendChild(l);
     });
-    runs.appendChild(el("p", { class: "muted small" }, "Each benchmark is run twice back-to-back. Run 1 may be cache-cold (disk cache, shader cache) and often looks worse; run 2 is the warm one. Runs are never averaged. Older single-run data counts as run 1."));
+    var hint = el("p", { class: "muted small" }, "Run 1 may be cache-cold and often looks worse; run 2 is warm. Runs are never averaged. ");
+    hint.innerHTML += '<a href="#method-runs">Details</a>';
+    runs.appendChild(hint);
     host.appendChild(runs);
 
     if (multi()) {
@@ -855,7 +906,7 @@
   }
 
   function renderResults() {
-    renderMachines(); renderCaveat(); renderCoverage(); renderSameCommit(); renderScenarios(); renderTimeline();
+    renderMachines(); renderCaveat(); renderCoverage(); renderSameCommit(); renderHeadline(); renderScenarios(); renderTimeline();
   }
 
   function init(d) {
@@ -863,9 +914,18 @@
     D.machines.forEach(function (m) { state.selected[m.id] = true; });
     renderStandard(); renderSeries(); renderControls(); renderResults();
     cmpReadUrl(); renderCompare();
-    document.getElementById("controls-sec").hidden = false;
+    document.getElementById("coverage-det").open = multi();
+    openHash();
     var t; window.addEventListener("resize", function () { clearTimeout(t); t = setTimeout(renderScenarios, 150); });
   }
+
+  // A link into the folded "How this is measured" part opens it.
+  function openHash() {
+    var t = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    for (var e = t; e; e = e.parentElement) if (e.tagName === "DETAILS") e.open = true;
+    if (t) t.scrollIntoView();
+  }
+  window.addEventListener("hashchange", openHash);
 
   fetch("data/bench.json").then(function (r) { return r.json(); }).then(init).catch(function (e) {
     document.getElementById("scenarios").appendChild(el("p", { class: "box" },
