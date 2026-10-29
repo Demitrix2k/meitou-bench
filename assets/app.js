@@ -771,6 +771,12 @@
   }
   // Distance in days is between commit dates, not between the dates the benchmarks were run.
   function cmpTime(c) { return Date.parse(cdate(c) + "T00:00:00Z"); }
+  // Age of a commit in whole days from today (UTC dates), for the compare pickers.
+  function daysAgo(c) {
+    var now = new Date(), today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    var n = Math.round((today - cmpTime(c)) / 86400000);
+    return n <= 0 ? "today" : n === 1 ? "1 day ago" : n + " days ago";
+  }
   // B for a given A: the newest older commit whose commit date is at least a day before A's; else the previous commit.
   function cmpOneDay(list, a) {
     var idx = list.indexOf(a), older = list.slice(idx + 1);
@@ -780,13 +786,6 @@
   function cmpDefaults(list) {
     if (!list.length) return;
     cmp.a = list[0].commit; cmp.b = cmpOneDay(list, list[0]).commit;
-  }
-  function cmpAgo(list, days) {
-    var a = list.filter(function (c) { return c.commit === cmp.a; })[0];
-    if (!a) return null;
-    var older = list.slice(list.indexOf(a) + 1);
-    for (var i = 0; i < older.length; i++) if (cmpTime(a) - cmpTime(older[i]) >= days * 86400000) return older[i];
-    return older[older.length - 1] || null;
   }
   function cmpRows(mid, commit, scen) {
     return D.rows.filter(function (r) { return r.machine === mid && r.commit === commit && r.scenario === scen; });
@@ -822,7 +821,7 @@
     function picker(label, key) {
       var l = el("label", { class: "cmp-pick" }, label + " ");
       var s = el("select");
-      list.forEach(function (c) { s.appendChild(el("option", { value: c.commit }, clabel(c))); });
+      list.forEach(function (c) { s.appendChild(el("option", { value: c.commit }, clabel(c) + " - " + daysAgo(c))); });
       s.value = cmp[key];
       s.addEventListener("change", function () { cmp[key] = s.value; cmpUrl(); renderCompare(); });
       l.appendChild(s); return l;
@@ -844,22 +843,6 @@
       if (c) { cmp.b = c.commit; cmpUrl(); renderCompare(); }
     });
     quick.appendChild(prev);
-    // B = the newest commit at least N days or weeks older than A (by commit date); the oldest one when none is that old.
-    var ago = el("span", { class: "cmp-ago" });
-    var num = el("input", { type: "number", min: "1", step: "1", value: String(cmp.agoN || 1), "aria-label": "how many days or weeks back" });
-    var unit = el("select", { "aria-label": "days or weeks" });
-    [["days", 1], ["weeks", 7]].forEach(function (u) { var o = el("option", { value: String(u[1]) }, u[0]); if ((cmp.agoUnit || 1) === u[1]) o.selected = true; unit.appendChild(o); });
-    var go = el("button", { type: "button" }, "ago");
-    function applyAgo() {
-      var n = Math.max(1, Math.floor(Number(num.value) || 1));
-      cmp.agoN = n; cmp.agoUnit = Number(unit.value);
-      var c = cmpAgo(list, n * cmp.agoUnit);
-      if (c) { cmp.b = c.commit; cmpUrl(); renderCompare(); }
-    }
-    go.addEventListener("click", applyAgo);
-    num.addEventListener("keydown", function (e) { if (e.key === "Enter") applyAgo(); });
-    ago.appendChild(document.createTextNode("vs ")); ago.appendChild(num); ago.appendChild(unit); ago.appendChild(go);
-    quick.appendChild(ago);
     bar.appendChild(quick);
     host.appendChild(bar);
 
