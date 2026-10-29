@@ -384,7 +384,7 @@
       tb.appendChild(ms);
     }
     [["Median", 0], ["p99", 1]].forEach(function (o) {
-      var lab = el("label", { class: "radio" }), r = el("input", { type: "radio", name: "bdstat-" + scen });
+      var lab = el("label", { class: "radio" }), r = el("input", { type: "radio", name: "bdstat-" + scen, "data-key": "bdstat/" + scen + "/" + o[1] });
       r.checked = state.bdStat === o[1];
       r.addEventListener("change", function () { state.bdStat = o[1]; renderScenarios(); });
       lab.appendChild(r); lab.appendChild(document.createTextNode(" " + o[0] + " ")); tb.appendChild(lab);
@@ -397,7 +397,7 @@
       grp.appendChild(el("b", {}, kind.toUpperCase() + ": "));
       bdStages(kind).forEach(function (s) {
         var on = bdVisible(kind, s, rowsAll), b = el("button", { type: "button", class: "bdchip" + (on ? "" : " off"), "aria-pressed": on ? "true" : "false",
-          title: "show / hide this " + kind.toUpperCase() + " line" });
+          "data-key": "bd/" + scen + "/" + kind + "/" + s, title: "show / hide this " + kind.toUpperCase() + " line" });
         b.innerHTML = '<svg width="16" height="8"><line x1="0" x2="16" y1="4" y2="4" stroke-width="3" style="stroke:' + bdColor(kind, s) + '"/></svg>' + esc(s);
         b.addEventListener("click", function () {
           var k = kind + "/" + s;
@@ -415,7 +415,15 @@
     bdChart(grid, "gpu", scen, commits, mc, rowsAll);
   }
 
+  // Rebuilding the charts empties both sections for a moment, which made the browser jump; keep the scroll position and the focused control.
   function renderScenarios() {
+    var y = window.scrollY, a = document.activeElement, fk = a && a.getAttribute ? a.getAttribute("data-key") : null;
+    renderScenariosNow();
+    window.scrollTo(window.scrollX, y);
+    if (fk) { var f = document.querySelector('[data-key="' + fk + '"]'); if (f) f.focus({ preventScroll: true }); }
+  }
+
+  function renderScenariosNow() {
     var host = document.getElementById("scenarios"), bhost = document.getElementById("breakdown");
     host.innerHTML = ""; bhost.innerHTML = "";
     var commits = commitsShown();
