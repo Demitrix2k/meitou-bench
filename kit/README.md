@@ -17,8 +17,8 @@ Total game time is about 8 minutes (plus about 35 s of loading per run).
 
 | platform (`platform` column) | status |
 |---|---|
-| Linux native (`native`) | The maintainer's own runs (the existing `daily-bench.csv`) were made with the earlier bash version of this kit. The Python version was checked only by a dry run (`bench.py --dry`), by unit tests of the command builders and probe parsers, and by recomputing the metrics of the maintainer's 10 finished runs (all 10 rows identical to `daily-bench.csv`). It has **not** started the game. |
-| Linux with Proton (`proton`) | The bash version was used by the maintainer; the Python version is untested. |
+| Linux native (`native`) | Ran end to end once (2026-10-29, CachyOS, RTX 3070 Laptop, commit `0d95057f`): save download and check, `build.py`, `bench.py`, both scenarios twice; play numbers in line with the maintainer's daily rows. The metric and breakdown columns are also unit tested against the maintainer's saved runs. |
+| Linux with Proton (`proton`) | Ran once (same day and machine): the play benchmark works; the **base switch does not**, because no keys are sent under Proton (the Windows build's console output does not reach `game.log`, so the kit never sees the save loaded). Skip `--scenario bases` with Proton until this is fixed. |
 | Windows (`windows`) | **Untested.** Command construction and the hardware probe are unit tested with simulated output only; building, starting the game and sending keys have never run on Windows. Contributors welcome: please report what works and what does not (an issue, or a note in your results). |
 | macOS (`macos`) | **Untested**, and Meitou's macOS support is itself young (see "macOS" below). Contributors welcome. |
 
