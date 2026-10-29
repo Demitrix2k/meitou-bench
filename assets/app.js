@@ -176,7 +176,7 @@
       var tx = X(i), a = sv("text", { x: tx, y: H - 24, "text-anchor": "middle" });
       a.textContent = short(c.commit).slice(0, 7); svg.appendChild(a);
       var b = sv("text", { x: tx, y: H - 11, "text-anchor": "middle" });
-      b.textContent = c.date.slice(5); svg.appendChild(b);
+      b.textContent = (c.commit_date || c.date).slice(5); svg.appendChild(b);
     });
 
     lines.forEach(function (ln) {
@@ -337,7 +337,7 @@
     commits.forEach(function (c, i) {
       if (i % step && i !== n - 1) return;
       var a = sv("text", { x: X(i), y: H - 24, "text-anchor": "middle" }); a.textContent = short(c.commit).slice(0, 7); svg.appendChild(a);
-      var b = sv("text", { x: X(i), y: H - 11, "text-anchor": "middle" }); b.textContent = c.date.slice(5); svg.appendChild(b);
+      var b = sv("text", { x: X(i), y: H - 11, "text-anchor": "middle" }); b.textContent = (c.commit_date || c.date).slice(5); svg.appendChild(b);
     });
     lines.forEach(function (ln) {
       var on = ln.pts.filter(function (p) { return !p.off; });

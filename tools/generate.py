@@ -498,7 +498,8 @@ def main():
     for i, h in enumerate(ordered):
         rs = sorted(by_commit[h], key=lambda r: (r["date"], r["time"]))
         mrs = [r for r in rs if r["machine"] == maint] or rs
-        entry = {"commit": short[h], "commit_full": h, "date": rs[0]["date"], "time": rs[0]["time"],
+        cd = (git(a.repo, "show", "-s", "--format=%cs", h) or "").strip()   # the commit's own date; the x-axis is labelled with it, so a commit benchmarked late (a backfill) shows where it belongs
+        entry = {"commit": short[h], "commit_full": h, "date": rs[0]["date"], "time": rs[0]["time"], "commit_date": cd or rs[0]["date"],
                  "series": mrs[0]["series"], "changes": None, "first_benchmark": i == 0}
         t = target_of[h]
         entry["target"] = t["commit"] if t else None
