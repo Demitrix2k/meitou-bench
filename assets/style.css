@@ -1,10 +1,13 @@
+@font-face{font-family:"Exo 2";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/exo-2-latin-400.woff2) format("woff2")}
+@font-face{font-family:"Exo 2";font-weight:600;font-style:normal;font-display:swap;src:url(fonts/exo-2-latin-600.woff2) format("woff2")}
+@font-face{font-family:"Exo 2";font-weight:700;font-style:normal;font-display:swap;src:url(fonts/exo-2-latin-700.woff2) format("woff2")}
 /* Themes: custom properties on :root[data-theme]. "default" is the roadmap palette (warm dark brown). */
 :root,:root[data-theme="default"]{
   color-scheme:dark;
   --bg:#1c1613; --panel:#2a201b; --text:#eadfcb; --muted:#a8977f; --line:#3d312a; --grid:#33281f; --accent:#e07b45;
   --m0:#6ea0ff; --m1:#f0a53c; --m2:#4ade80; --m3:#c084fc; --m4:#f472b6; --m5:#22d3ee; --m6:#a3e635; --m7:#a8a29e;
   --bs:70%; --bl:65%;
-  --run1:#6ea0ff; --run2:#f0a53c; --brk:#7d6d5a; --good:#7fd09c; --bad:#f08b82; --link:#f0a070;
+  --run1:#6ea0ff; --run2:#f0a53c; --brk:#7d6d5a; --good:#7fd09c; --bad:#f08b82; --link:#e07b45;
   --panel-a:84%; --scrim:84%;
 }
 :root[data-theme="light"]{
@@ -40,18 +43,18 @@
   --panel-a:84%; --scrim:84%;
 }
 *{box-sizing:border-box}
-body{margin:0;background:transparent;color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{margin:0;background:transparent;color:var(--text);font:15px/1.5 "Exo 2","Segoe UI",Tahoma,sans-serif;-webkit-font-smoothing:antialiased}
 .wrap{max-width:1080px;margin:0 auto;padding:0 16px}
 header.wrap{padding-top:28px}
-h1{font-size:1.9rem;margin:0 0 .4rem}
-h2{font-size:1.35rem;margin:1.6rem 0 .5rem}
-h3{font-size:1.05rem;margin:0}
+h1{font-size:2.3rem;font-weight:700;line-height:1.1;margin:0 0 .6rem;letter-spacing:.01em}
+h2{font-size:1.45rem;font-weight:600;margin:1.6rem 0 .5rem;letter-spacing:.01em}
+h3{font-size:1.1rem;font-weight:600;margin:0}
 a{color:var(--link)}
 code{font:.9em ui-monospace,Menlo,Consolas,monospace;background:var(--grid);padding:.05em .3em;border-radius:4px}
 .lead{color:var(--text);font-size:1.05rem}
 .muted{color:var(--muted)}
 main > *{max-width:100%}
-.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:16px 0}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:14px 18px;margin:16px 0}
 main > section > h2{margin-top:2rem}
 .box h2{margin-top:.2rem}
 .setup{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 24px;margin:.6rem 0}
@@ -64,10 +67,10 @@ select{font:inherit;color:var(--text);background:var(--panel);border:1px solid v
 .legend svg{vertical-align:-3px}
 .charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media (max-width:700px){.charts{grid-template-columns:1fr}}
-.chart{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 10px 4px;min-width:0}
+.chart{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:10px 10px 4px;min-width:0}
 .chart h3{font-size:.95rem;padding:0 4px}
 .chart svg{display:block;overflow:visible}
-.chart text{fill:var(--muted);font-size:12.5px}
+.chart text{fill:var(--muted);font-size:12.5px;font-family:inherit}
 .chart .grid{stroke:var(--grid);stroke-width:1}
 .chart .brk{stroke:var(--brk);stroke-dasharray:4 3;stroke-width:1}
 .chart .hit{fill:transparent;cursor:pointer}
@@ -81,7 +84,7 @@ th{color:var(--muted);font-weight:600;font-size:.8rem}
 .scen{margin:20px 0}
 .scen-h{margin:0 0 .5rem;font-size:1.1rem}
 .scen-h .muted{font-weight:400;font-size:.92rem}
-.tl{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:12px 0}
+.tl{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:12px 16px;margin:12px 0}
 .tl-head{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
 .tl-head .when{color:var(--muted);font-size:.9rem}
 .chip{display:inline-block;font-size:.8rem;border:1px solid var(--line);border-radius:999px;padding:1px 9px;margin:2px 4px 2px 0;background:var(--bg)}
@@ -96,17 +99,17 @@ th{color:var(--muted);font-weight:600;font-size:.8rem}
 footer{padding:20px 16px 40px;font-size:.9rem}
 .dot{display:inline-block;width:.7em;height:.7em;border-radius:50%;margin-right:.35em;vertical-align:baseline}
 #machines{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px}
-.mcard{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;cursor:default}
+.mcard{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:10px 14px;cursor:default}
 .mcard input{margin-top:.35rem}
 .mbody{min-width:0;font-size:.92rem;overflow-wrap:anywhere}
 .mtitle{font-size:1rem}
 .controls{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}
-.ctl{flex:1 1 320px;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:8px 14px;margin:0}
+.ctl{flex:1 1 320px;border:1px solid var(--line);border-radius:20px;background:var(--panel);padding:8px 14px;margin:0}
 .ctl legend{font-weight:600;padding:0 6px}
 .ctl label{display:block;margin:2px 0}
 .small{font-size:.9rem;margin:.4rem 0 .2rem}
 .reflab{margin-left:1.5rem}
-.caveat{border:1px solid var(--bad);border-radius:10px;padding:8px 14px;background:var(--panel);margin:8px 0}
+.caveat{border:1px solid var(--bad);border-radius:20px;padding:8px 14px;background:var(--panel);margin:8px 0}
 #samecommit h3{margin:.8rem 0 .3rem}
 #samecommit .sha{font:.9rem ui-monospace,Menlo,Consolas,monospace}
 .tl-head .who{font-size:.9rem}
@@ -163,7 +166,7 @@ pre code{background:none;padding:0}
 .mcard.compact .mbody > div + div::before{content:" \00b7  ";color:var(--muted)}
 #machines:has(.compact){display:block}
 .legend{margin:.5rem 0}
-@media (max-width:700px){h1{font-size:1.6rem}.box{padding:12px 14px}}
+@media (max-width:700px){h1{font-size:1.8rem}.box{padding:12px 14px}}
 .chart svg{max-width:100%;height:auto}
 
 /* Backdrop (same technique as the roadmap page): two cross-faded layers and a scrim of the page colour. */
@@ -181,7 +184,28 @@ html[data-bg="none"] :is(.box,.chart,.tl,.mcard,.ctl,.caveat,.bdchip,.cmp-quick 
 #tip{background:var(--panel)!important}
 header.wrap,footer.wrap{text-shadow:0 1px 3px color-mix(in srgb,var(--bg) 80%,transparent)}
 .box{backdrop-filter:blur(2px)}
-.topbar{display:flex;justify-content:flex-end;gap:10px 14px;flex-wrap:wrap;padding:8px 0 0;font-size:.85rem}
-.topbar label{display:inline-flex;gap:6px;align-items:center;color:var(--muted)}
-.topbar select{font-size:.85rem;padding:2px 6px}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Site header, as on the roadmap page: wordmark left, links right, note centred. */
+.site-top{max-width:1080px;margin:0 auto;padding:0 16px}
+.top{display:flex;align-items:center;gap:16px 24px;flex-wrap:wrap;justify-content:flex-end;padding:16px 0 8px;position:relative}
+.brand{margin-right:auto;color:var(--text);font:600 30px/36px "Exo 2",sans-serif;text-decoration:none}
+.brand span{font-weight:400}
+.gh{display:inline-flex;align-items:center;gap:8px;color:var(--text);font:400 16px/21px "Exo 2",sans-serif;text-decoration:none;opacity:.85;transition:opacity .16s ease;cursor:pointer}
+.gh:hover,.gh[aria-current]{opacity:1;color:var(--text)}
+.gh[aria-current]{text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:6px}
+.center{order:10;flex-basis:100%;text-align:right;margin-top:-6px;color:var(--muted);font:400 14px/18px "Exo 2",sans-serif;white-space:nowrap}
+.center a{color:var(--accent)}
+@media (max-width:700px){.center{text-align:center}}
+.appearance{position:relative}
+.appearance summary{list-style:none;font-weight:400}
+.appearance summary::-webkit-details-marker{display:none}
+.appearance summary::before{content:"\2699";margin-right:6px}
+.pop{position:absolute;right:0;top:calc(100% + 8px);z-index:20;display:grid;gap:8px;min-width:240px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 22px rgba(0,0,0,.45)}
+.pop label{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--text);font-size:.9rem}
+header.wrap{padding-top:12px}
+/* Headline tiles: rounded plates with a coloured accent bar, as the roadmap's status tiles. */
+.tile{position:relative;overflow:hidden;padding:4px 4px 4px 14px;--c:var(--m0)}
+.tile::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;border-radius:2px;background:var(--c)}
+.tile:nth-child(2){--c:var(--m1)}.tile:nth-child(3){--c:var(--m2)}.tile:nth-child(4){--c:var(--m3)}
+.tile .v{font-weight:700;color:var(--c)}

@@ -968,3 +968,10 @@
   applyTheme(get("meitou-theme", "default"));
   applyBg(get("meitou-bg", "rotate"));
 })();
+
+// Appearance popover: closes on Escape or a click outside.
+(function () {
+  var d = document.querySelector(".appearance"); if (!d) return;
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && d.open) { d.open = false; d.querySelector("summary").focus(); } });
+  document.addEventListener("click", function (e) { if (d.open && !d.contains(e.target)) d.open = false; });
+})();
