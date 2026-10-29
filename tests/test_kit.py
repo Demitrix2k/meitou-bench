@@ -188,5 +188,76 @@ class Save(unittest.TestCase):
             self.assertFalse(ok); self.assertEqual(pr, ["not in the manifest: extra"])
 
 
+class Breakdown(unittest.TestCase):
+    def _frames(self, d, with_stages=True):
+        import bench_table as T
+        stages = [("cpu_" + x) for x in T.F12_STAGES if x not in T.F12_GPU_ONLY] + [("gpu_" + x) for x in T.F12_STAGES if x not in T.F12_CPU_ONLY]
+        head = ["segment", "frame_ms", "sim_slow-world", "gpu_total_ms"] + (stages if with_stages else [])
+        os.makedirs(os.path.join(d, "bench"))
+        with open(os.path.join(d, "bench", "frames.csv"), "w") as f:
+            f.write(",".join(head) + "\n")
+            f.write(",".join(["settle", "99", "1", "50"] + ["9"] * (len(head) - 4 if with_stages else 0)) + "\n")   # settle rows are left out
+            for i in range(1, 11):
+                f.write(",".join(["idle", str(10 + i), "1", "5"] + ["0.1"] * (len(head) - 4 if with_stages else 0)) + "\n")
+        return os.path.join(d, "bench", "frames.csv")
+
+    def test_columns(self):
+        import bench_table as T
+        self.assertEqual(len(T.BREAKDOWN_COLS), 94)
+        self.assertEqual(T.BREAKDOWN_COLS[:2], ["cpu_upd_terrain_p50_ms", "cpu_upd_terrain_p99_ms"])
+        self.assertEqual(T.BREAKDOWN_COLS[-4:], ["gpu_other_p50_ms", "gpu_other_p99_ms", "gpu_total_p50_ms", "gpu_total_p99_ms"])
+
+    def test_synthetic(self):
+        import bench_table as T
+        with tempfile.TemporaryDirectory() as d:
+            b = T.breakdown(self._frames(d))
+            self.assertEqual(b["cpu_total_p50_ms"], "2.100")      # 21 CPU stages x 0.1
+            self.assertEqual(b["gpu_other_p50_ms"], "2.700")      # gpu_total 5 minus 23 GPU stages x 0.1
+
+    def test_missing(self):
+        import bench_table as T
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(T.breakdown(self._frames(d, with_stages=False)), {})
+            self.assertEqual(T.breakdown(os.path.join(d, "nope.csv")), {})
+
+    def test_recompute_maintainer_rows(self):
+        """Every breakdown column recomputed from the maintainer's saved runs equals the daily-bench.csv row (skipped when those files are absent)."""
+        import csv, glob, bench_table as T
+        notes = "/mnt/Storage/SteamLibrary/steamapps/common/Kenshi/Meitou/docs"
+        path = os.path.join(notes, "performance", "daily-bench.csv")
+        if not os.path.isfile(path):
+            self.skipTest("maintainer notes not present")
+        with open(path, newline="") as fh:
+            rows = list(csv.DictReader(fh))
+        n = 0
+        for fr in sorted(glob.glob(os.path.join(notes, "captures", "daily-bench", "*", "*", "*", "bench", "frames.csv"))):
+            run = fr.split(os.sep)
+            name, scen, day = run[-3], run[-4], run[-5]
+            if day.endswith("-extra"): continue
+            date, commit = day[:10], day[11:]
+            want_run = name.split("-")[-2]
+            seg = "bases" if scen == "bases" else "idle,orbit,zoom,pan"
+            match = [r for r in rows if r["date"] == date and r["commit"] == commit and r["run"] == want_run and r["segments"].startswith(seg) and "extra run" not in r["note"]]
+            if len(match) != 1 or not match[0].get("cpu_total_p50_ms"): continue
+            got = T.breakdown(fr)
+            for c in T.BREAKDOWN_COLS:
+                self.assertEqual(got[c], match[0][c], f"{day} {scen} run {want_run} {c}")
+            n += 1
+        if n == 0: self.skipTest("no matching saved runs")
+
+    def test_history_columns(self):
+        import bench_table as T
+        with tempfile.TemporaryDirectory() as d:
+            run = os.path.join(d, "native-gog-1-master"); os.makedirs(run)
+            self._frames(run)
+            open(os.path.join(d, "settings.txt"), "w").write("platform=native\ndata=gog\nsave=s\nsegments=idle\n")
+            open(os.path.join(d, "builds.txt"), "w").write("master\tMeitou-master-linux\tabcd1234\n")
+            out = os.path.join(d, "r.csv")
+            T.history(out, d, "n", "drv", "m", "cpu", "8", "os", "k")
+            r = list(__import__("csv").reader(open(out)))
+            self.assertEqual(r[0], T.HIST_COLS + T.EXTRA_COLS + T.BREAKDOWN_COLS)
+            self.assertEqual(len(r[1]), len(r[0]))
+
+
 if __name__ == "__main__":
     unittest.main()

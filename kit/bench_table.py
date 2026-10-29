@@ -145,6 +145,45 @@ HIST_COLS = ['date', 'time', 'build', 'commit', 'platform', 'data', 'save', 'seg
 # Columns appended by the dev kit (the first 19 are those of the maintainers' daily-bench.csv, so rows can be merged). nvidia_driver holds the GPU driver version of any vendor.
 EXTRA_COLS = ['machine', 'cpu', 'ram_gb', 'os', 'kernel', 'resolution']
 
+# F12 profiler breakdown (same names, order and maths as the maintainers' bench-compare-table.py). Stage names in F12 order; frames.csv has
+# cpu_<stage> and gpu_<stage> per frame. CPU = the render thread's time per stage (includes driver waits); GPU = GPU time per stage from timestamp
+# queries, plus "other" (gpu_total_ms minus the stamped stages) and "total" (gpu_total_ms). F12 shows no CPU time for the GPU-only stages and no GPU
+# time for driver-wait; those are left out. Columns: cpu_<stage>_p50_ms / _p99_ms (stage name with '-' written '_'), cpu_total_*, gpu_<stage>_*,
+# gpu_other_*, gpu_total_*; ms, 3 decimals, over the frames after "settle"; blank = frames.csv without these columns. Appended after EXTRA_COLS.
+F12_STAGES = ['upd-terrain', 'upd-objects', 'upd-foliage', 'upd-chars', 'sky-prepare', 'uploads', 'cull', 'bake', 'shadows', 'gi', 'reflection', 'sky-draw',
+              'terrain', 'objects', 'foliage', 'characters', 'water', 'shafts', 'fog', 'particles', 'post', 'ui', 'submit', 'driver-wait']
+F12_GPU_ONLY = {'uploads', 'cull', 'bake'}
+F12_CPU_ONLY = {'driver-wait'}
+def _cn(stage): return stage.replace('-', '_')
+BREAKDOWN_COLS = (
+    [f'cpu_{_cn(s)}_{q}_ms' for s in F12_STAGES if s not in F12_GPU_ONLY for q in ('p50', 'p99')] + ['cpu_total_p50_ms', 'cpu_total_p99_ms'] +
+    [f'gpu_{_cn(s)}_{q}_ms' for s in F12_STAGES if s not in F12_CPU_ONLY for q in ('p50', 'p99')] +
+    ['gpu_other_p50_ms', 'gpu_other_p99_ms', 'gpu_total_p50_ms', 'gpu_total_p99_ms'])
+
+def breakdown(path):
+    """dict column -> formatted ms (3 decimals) for BREAKDOWN_COLS from a frames.csv; {} when the file or its columns are missing."""
+    if not os.path.isfile(path): return {}
+    try:
+        with open(path, encoding='utf-8', newline='') as fh:
+            rows = [r for r in csv.DictReader(fh) if r['segment'] != 'settle']
+        series = {}
+        for s in F12_STAGES:
+            if s not in F12_GPU_ONLY: series[f'cpu_{_cn(s)}'] = [float(r['cpu_' + s]) for r in rows]
+            if s not in F12_CPU_ONLY: series[f'gpu_{_cn(s)}'] = [float(r['gpu_' + s]) for r in rows]
+        gtot = [float(r['gpu_total_ms']) for r in rows]
+    except (KeyError, ValueError):
+        return {}
+    if not rows: return {}
+    series['cpu_total'] = [sum(v) for v in zip(*[series[f'cpu_{_cn(s)}'] for s in F12_STAGES if s not in F12_GPU_ONLY])]
+    gsum = [sum(v) for v in zip(*[series[f'gpu_{_cn(s)}'] for s in F12_STAGES if s not in F12_CPU_ONLY])]
+    series['gpu_other'] = [t - g for t, g in zip(gtot, gsum)]
+    series['gpu_total'] = gtot
+    out = {}
+    for k, v in series.items():
+        out[f'{k}_p50_ms'] = f'{pct(v, 50):.3f}'
+        out[f'{k}_p99_ms'] = f'{pct(v, 99):.3f}'
+    return out
+
 def history(csvpath, outdir, note, driver, machine='', cpu='', ram_gb='', os_name='', kernel=''):
     """Append one row per successful run to csvpath (header written if the file is new or empty; existing rows are never touched)."""
     outdir = outdir.rstrip('/')
@@ -167,13 +206,15 @@ def history(csvpath, outdir, note, driver, machine='', cpu='', ram_gb='', os_nam
             gpu = g.group(1) if g else line
             r = re.search(r'(\d+x\d+), ', line)
             res = r.group(1) if r else ''   # the resolution the benchmark rendered at (the game window), from the game's own summary
+        bd = breakdown(os.path.join(d, 'bench', 'frames.csv'))
         rows.append([m.group(1) if m else '', m.group(2) if m else '', b[1], b[2] if len(b) > 2 else '', cfg.get('platform', ''), cfg.get('data', ''),
                      cfg.get('save', ''), cfg.get('segments', ''), num, f"{s['over33']:.1f}", fmt(s['p50']), fmt(s['p99']), fmt(s['mx'], 0), s['over100'],
-                     fmt(s['sw_p99']), fmt(s['sw_max'], 0), gpu, driver, note, machine, cpu, ram_gb, os_name, kernel, res])
+                     fmt(s['sw_p99']), fmt(s['sw_max'], 0), gpu, driver, note, machine, cpu, ram_gb, os_name, kernel, res]
+                    + [bd.get(c, '') for c in BREAKDOWN_COLS])
     new = not os.path.isfile(csvpath) or os.path.getsize(csvpath) == 0
     with open(csvpath, 'a', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
-        if new: w.writerow(HIST_COLS + EXTRA_COLS)
+        if new: w.writerow(HIST_COLS + EXTRA_COLS + BREAKDOWN_COLS)
         w.writerows(rows)
     print(f'history: {len(rows)} row(s) appended to {csvpath}')
     return 0

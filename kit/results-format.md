@@ -26,6 +26,8 @@
 | kernel | kernel release (Linux, macOS: Darwin), Windows version number |
 | resolution | resolution the benchmark rendered at (the game window), from `bench/summary.md`; depends on your screen size and affects every number |
 
+After `resolution` come 94 optional F12-stage columns (the same names and order as the maintainers' `daily-bench.csv`): `cpu_<stage>_p50_ms` / `_p99_ms` for each stage (`-` written `_`, e.g. `cpu_upd_terrain_p50_ms`), `cpu_total_*`, `gpu_<stage>_*`, `gpu_other_*`, `gpu_total_*`, in ms with 3 decimals, computed from the same frames as above. Blank when the game's `frames.csv` has no stage columns.
+
 The `settle` segment is always run first and left out of the numbers. Each folder under `play/` and `bases/` also keeps the game's per-frame `bench/frames.csv`, its `summary.md`, the MangoHud log and `game.log`.
 
 To merge several machines into one file: keep one header and append the data rows (`tail -n +2`). Rows from `daily-bench.csv` have only 19 fields; pad them with six empty fields or leave them as they are when reading with a tool that tolerates short rows.
