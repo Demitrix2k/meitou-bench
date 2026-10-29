@@ -34,6 +34,30 @@ METRICS = {  # public name -> CSV column
 }
 REQUIRED_COLS = ["date", "time", "commit", "platform", "data", "save", "segments", "run"] + \
     list(METRICS.values()) + ["gpu", "nvidia_driver"]
+# Optional F12-profiler breakdown columns (see docs/scripts/bench-compare-table.py BREAKDOWN_COLS in the maintainer's notes):
+# cpu_<stage>_p50_ms / _p99_ms, gpu_<stage>_p50_ms / _p99_ms, cpu_total_*, gpu_other_*, gpu_total_*; stage names as in F12 with '-' written '_'.
+F12_STAGES = ["upd-terrain", "upd-objects", "upd-foliage", "upd-chars", "sky-prepare", "uploads", "cull", "bake", "shadows", "gi", "reflection", "sky-draw",
+              "terrain", "objects", "foliage", "characters", "water", "shafts", "fog", "particles", "post", "ui", "submit", "driver-wait"]
+F12_GPU_ONLY = ["uploads", "cull", "bake"]
+F12_CPU_ONLY = ["driver-wait"]
+
+
+def breakdown_of(r):
+    """{"cpu": {stage: [p50, p99]}, "gpu": {...}} from the optional columns of a CSV row; None when the row has none."""
+    out = {}
+    for kind, names in (("cpu", [s for s in F12_STAGES if s not in F12_GPU_ONLY] + ["total"]),
+                        ("gpu", [s for s in F12_STAGES if s not in F12_CPU_ONLY] + ["other", "total"])):
+        d = {}
+        for n in names:
+            c = "%s_%s" % (kind, n.replace("-", "_"))
+            a, b = num(r.get(c + "_p50_ms")), num(r.get(c + "_p99_ms"))
+            if a is not None and b is not None:
+                d[n] = [a, b]
+        if d:
+            out[kind] = d
+    return out or None
+
+
 MACHINE_REQUIRED = ["id", "github", "cpu", "gpu", "ram_gb", "os", "resolution", "added"]
 MACHINE_OPTIONAL = ["name", "notes", "os_family"]
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,46}[a-z0-9]$")
@@ -403,6 +427,7 @@ def main():
             "date": r["date"], "time": r["time"], "commit": short[h], "commit_full": h,
             "scenario": sc["id"], "run": counter[key],
             "metrics": {k: num(r[c]) for k, c in METRICS.items()},
+            "breakdown": breakdown_of(r),
             "gpu": r["gpu"], "driver": r["nvidia_driver"], "machine": r["machine"],
             "platform": r["platform"], "series": series_of(r),
             "note": clean_note(r.get("note"), counter[key]),
@@ -511,6 +536,7 @@ def main():
         "repo_url": cfg["repo_url"],
         "machines": mlist,
         "series": series,
+        "stages": {"order": F12_STAGES, "gpu_only": F12_GPU_ONLY, "cpu_only": F12_CPU_ONLY},
         "scenarios": {v["id"]: {"title": v["title"], "subtitle": v["subtitle"], "segments": k}
                       for k, v in cfg["scenarios"].items()},
         "buckets": cfg["buckets"],

@@ -37,6 +37,7 @@ Two scenarios: the play benchmark (upstream's own `--play-bench`, camera segment
 base switch (four camera jumps between the two bases). Metrics: share of frames over 33 ms, p50 / p99 / max frame
 time, frames over 100 ms, and the game's own slow simulation-tick timings ("slow world" p99 / max).
 Lower is better for all of them.
+The CSV may also carry 94 trailing columns with the game's F12 profiler stages (median and p99 per stage, `cpu_<stage>_p50_ms`, `gpu_<stage>_p99_ms`, ...; optional, blank for older rows); the page draws them as a CPU and a GPU chart per scenario (`breakdown` in `data/bench.json`).
 
 ## Data layout
 

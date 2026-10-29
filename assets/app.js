@@ -14,7 +14,7 @@
   ]);
   var NS = "http://www.w3.org/2000/svg";
   var D = null;
-  var state = { selected: {}, runMode: "warm", relative: false, ref: "" };
+  var state = { selected: {}, runMode: "warm", relative: false, ref: "", bdStat: 0, bdMachine: "", bdOff: {}, bdOn: {} };
   var tip = document.getElementById("tip");
 
   function el(tag, attrs, text) {
@@ -274,6 +274,138 @@
     return wrap;
   }
 
+  // ---- Frame-time breakdown: the stages of the game's F12 profiler (CPU = render thread, GPU = timestamp queries) ----
+  function bdStages(kind) {
+    var st = D.stages, out = st.order.filter(function (s) { return kind === "cpu" ? st.gpu_only.indexOf(s) < 0 : st.cpu_only.indexOf(s) < 0; });
+    if (kind === "gpu") out.push("other");
+    out.push("total");
+    return out;
+  }
+  function bdColor(kind, s) {
+    if (s === "total") return "var(--text)";
+    var i = D.stages.order.indexOf(s); if (s === "other") i = D.stages.order.length;
+    return "hsl(" + Math.round((i * 137.5) % 360) + ",var(--bs),var(--bl))";
+  }
+  function bdRows(mc, c, scen) {
+    return pick(rowsFor(mc, c.commit, scen)).filter(function (r) { return r.breakdown; });
+  }
+  // A stage is drawn when the user turned it on, or by default when its median is at least 0.5 ms somewhere (and always the total).
+  function bdVisible(kind, s, rowsAll) {
+    var k = kind + "/" + s;
+    if (state.bdOn[k]) return true;
+    if (state.bdOff[k]) return false;
+    if (s === "total") return true;
+    return rowsAll.some(function (r) { var d = r.breakdown[kind]; return d && d[s] && d[s][0] >= 0.5; });
+  }
+  function bdChart(host, kind, scen, commits, mc, rowsAll) {
+    var title = kind === "cpu" ? "CPU time by stage (render thread, includes driver waits)" : "GPU time by stage";
+    var box = el("div", { class: "chart" });
+    box.appendChild(el("h3", {}, title + " - " + (state.bdStat ? "p99" : "median") + ", ms"));
+    host.appendChild(box);
+    var W = Math.max(240, Math.floor(box.clientWidth - 20)), H = 280, m = { l: 46, r: 26, t: 14, b: 48 };
+    var pw = W - m.l - m.r, ph = H - m.t - m.b, n = commits.length;
+    var svg = sv("svg", { width: W, height: H, viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": title + " per benchmarked commit" });
+    var stages = bdStages(kind).filter(function (s) { return bdVisible(kind, s, rowsAll); });
+    var lines = [], max = 0;
+    stages.forEach(function (s) {
+      var groups = {};
+      commits.forEach(function (c, i) {
+        bdRows(mc, c, scen).forEach(function (r) {
+          var d = r.breakdown[kind]; if (!d || !d[s]) return;
+          var v = d[s][state.bdStat]; if (v > max) max = v;
+          var g = state.runMode === "both" ? r.run : 0;
+          (groups[g] = groups[g] || []).push({ i: i, c: c, r: r, v: v, off: !!c.off_target });
+        });
+      });
+      Object.keys(groups).forEach(function (g) { lines.push({ s: s, g: +g, pts: groups[g] }); });
+    });
+    var tk = niceTicks(max); max = tk[tk.length - 1];
+    function X(i) { return m.l + (n === 1 ? pw / 2 : (pw * i) / (n - 1)); }
+    function Y(v) { return m.t + ph - (v / max) * ph; }
+    tk.forEach(function (gv) {
+      var gy = Y(gv);
+      svg.appendChild(sv("line", { class: "grid", x1: m.l, x2: W - m.r, y1: gy, y2: gy }));
+      var t = sv("text", { x: m.l - 5, y: gy + 4, "text-anchor": "end" }); t.textContent = fmt(gv); svg.appendChild(t);
+    });
+    commits.forEach(function (c, i) {
+      if (i > 0 && c.series != null && commits[i - 1].series != null && c.series !== commits[i - 1].series) {
+        var bx = (X(i) + X(i - 1)) / 2;
+        svg.appendChild(sv("line", { class: "brk", x1: bx, x2: bx, y1: m.t, y2: m.t + ph }));
+      }
+    });
+    var step = Math.max(1, Math.ceil(n / Math.max(1, Math.floor(pw / 62))));
+    commits.forEach(function (c, i) {
+      if (i % step && i !== n - 1) return;
+      var a = sv("text", { x: X(i), y: H - 24, "text-anchor": "middle" }); a.textContent = short(c.commit).slice(0, 7); svg.appendChild(a);
+      var b = sv("text", { x: X(i), y: H - 11, "text-anchor": "middle" }); b.textContent = c.date.slice(5); svg.appendChild(b);
+    });
+    lines.forEach(function (ln) {
+      var on = ln.pts.filter(function (p) { return !p.off; });
+      if (on.length > 1) svg.appendChild(sv("polyline", { class: "bl" + (ln.s === "total" ? " tot" : "") + (ln.g === 2 ? " dashed" : ""),
+        style: "stroke:" + bdColor(kind, ln.s), points: on.map(function (p) { return X(p.i) + "," + Y(p.v); }).join(" ") }));
+    });
+    lines.forEach(function (ln) {
+      ln.pts.forEach(function (p) {
+        var x = X(p.i), y = Y(p.v);
+        svg.appendChild(sv("circle", { class: "bp" + (p.off ? " off" : ""), cx: x, cy: y, r: 2.5, style: "fill:" + bdColor(kind, ln.s) }));
+        var hit = sv("circle", { class: "hit", cx: x, cy: y, r: 8 });
+        var html = "<b>" + esc(short(p.c.commit)) + "</b> - " + esc(p.r.date + " " + p.r.time) + "<br>" + kind.toUpperCase() + " " + esc(ln.s) +
+          ": <b>" + fmt(p.v) + " ms</b> (" + (state.bdStat ? "p99" : "median") + ")<br>run " + p.r.run;
+        hit.addEventListener("mousemove", function (ev) { showTip(html, ev); });
+        hit.addEventListener("mouseleave", hideTip);
+        svg.appendChild(hit);
+      });
+    });
+    box.appendChild(svg);
+  }
+  function bdSection(sec, scen, commits) {
+    var avail = D.machines.filter(function (mc) { return state.selected[mc.id] && D.rows.some(function (r) { return r.machine === mc.id && r.scenario === scen && r.breakdown; }); });
+    var box = el("div", { class: "bd" });
+    box.appendChild(el("h3", {}, "Where the frame time goes (stages of the game's F12 profiler)"));
+    sec.appendChild(box);
+    if (!avail.length) { box.appendChild(el("p", { class: "muted" }, "No stage timings for the selected machines.")); return; }
+    var mc = avail.filter(function (x) { return x.id === state.bdMachine; })[0] || avail[0];
+    var tb = el("div", { class: "toolbar" });
+    if (avail.length > 1) {
+      var ms = el("select"); avail.forEach(function (x) { var o = el("option", { value: x.id }, mname(x)); if (x === mc) o.selected = true; ms.appendChild(o); });
+      ms.addEventListener("change", function () { state.bdMachine = ms.value; renderScenarios(); });
+      tb.appendChild(ms);
+    }
+    [["Median", 0], ["p99", 1]].forEach(function (o) {
+      var lab = el("label", { class: "radio" }), r = el("input", { type: "radio", name: "bdstat-" + scen });
+      r.checked = state.bdStat === o[1];
+      r.addEventListener("change", function () { state.bdStat = o[1]; renderScenarios(); });
+      lab.appendChild(r); lab.appendChild(document.createTextNode(" " + o[0] + " ")); tb.appendChild(lab);
+    });
+    box.appendChild(tb);
+    var rowsAll = D.rows.filter(function (r) { return r.machine === mc.id && r.scenario === scen && r.breakdown; });
+    var lg = el("div", { class: "legend bdlegend" });
+    ["cpu", "gpu"].forEach(function (kind) {
+      var grp = el("div", { class: "bdgrp" });
+      grp.appendChild(el("b", {}, kind.toUpperCase() + ": "));
+      bdStages(kind).forEach(function (s) {
+        var on = bdVisible(kind, s, rowsAll), b = el("button", { type: "button", class: "bdchip" + (on ? "" : " off"), "aria-pressed": on ? "true" : "false",
+          title: "show / hide this " + kind.toUpperCase() + " line" });
+        b.innerHTML = '<svg width="16" height="8"><line x1="0" x2="16" y1="4" y2="4" stroke-width="3" style="stroke:' + bdColor(kind, s) + '"/></svg>' + esc(s);
+        b.addEventListener("click", function () {
+          var k = kind + "/" + s;
+          if (on) { delete state.bdOn[k]; state.bdOff[k] = 1; } else { delete state.bdOff[k]; state.bdOn[k] = 1; }
+          renderScenarios();
+        });
+        grp.appendChild(b);
+      });
+      lg.appendChild(grp);
+    });
+    box.appendChild(lg);
+    var grid = el("div", { class: "charts" });
+    box.appendChild(grid);
+    bdChart(grid, "cpu", scen, commits, mc, rowsAll);
+    bdChart(grid, "gpu", scen, commits, mc, rowsAll);
+    box.appendChild(el("p", { class: "muted" }, "Same stages and names as the F12 profiler. CPU is the render thread's time per stage (uploads, cull and bake have no CPU line); " +
+      "GPU is measured with timestamp queries (driver-wait has no GPU line; \"other\" is GPU time outside the stamped stages). " +
+      "The CPU and GPU lines are of the same frames but run in parallel, so they do not add up to the frame time. Values are per-stage distributions over the frames after the settle phase. Click a name to show or hide its line."));
+  }
+
   function renderScenarios() {
     var host = document.getElementById("scenarios");
     host.innerHTML = "";
@@ -289,6 +421,7 @@
       sec.appendChild(grid);
       host.appendChild(sec);
       METRICS.forEach(function (mt) { chart(grid, mt, sid, commits); });
+      bdSection(sec, sid, commits);
       selectedMachines().forEach(function (mc) {
         var s = summaryFor(sid, commits, mc);
         if (s) sec.appendChild(s);
