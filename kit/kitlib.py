@@ -353,6 +353,10 @@ def game_process_lines(osname, run=run_capture):
 # ---------------------------------------------------------------- misc
 def copytree_rw(src, dst):
     shutil.copytree(src, dst)
+    try:
+        os.chmod(dst, os.stat(dst).st_mode | 0o200)   # the top folder too (the game writes its autosave into it; a read-only one cannot be removed)
+    except OSError:
+        pass
     for root, dirs, files in os.walk(dst):   # a copy of a read-only save must be writable (the game writes its autosave there)
         for n in dirs + files:
             p = os.path.join(root, n)

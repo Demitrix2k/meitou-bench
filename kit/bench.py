@@ -382,6 +382,8 @@ def main(argv):
                                f"platform: {plat}", f"os_family: {osname}", f"rid: {rid}", f"kenshi_path: {kenshi}"]) + "\n")
         print(f"copying the save to {save_copy} ...")
         os.makedirs(os.path.dirname(save_copy), exist_ok=True)
+        if os.path.isdir(save_copy):   # a rerun into the same output folder (same day, commit and machine): start from a fresh copy
+            K.rmtree_force(save_copy)
         K.copytree_rw(save_dir, save_copy)
         if keys:
             try:
@@ -413,6 +415,8 @@ def main(argv):
                            compat_data=env.get("STEAM_COMPAT_DATA_PATH") or os.path.join(K.KIT, "proton-prefix"),
                            compat_client=env.get("STEAM_COMPAT_CLIENT_INSTALL_PATH") or os.path.expanduser("~/.local/share/Steam"),
                            keep_wayland=bool(env.get("KEEP_WAYLAND")), mac_vulkan_dir=mac_vk)
+                if plat == "proton" and not dry:
+                    os.makedirs(cfg["compat_data"], exist_ok=True)   # proton refuses a compat data folder that does not exist yet
                 launch = game_launch(cfg, run_dir, mdir)
                 shown = " ".join(shlex.quote(a) for a in launch["argv"])
                 envs = " ".join(f"{k2}={v}" for k2, v in launch["env"].items())
