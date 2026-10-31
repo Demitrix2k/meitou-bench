@@ -8,7 +8,7 @@
   --m0:#6ea0ff; --m1:#f0a53c; --m2:#4ade80; --m3:#c084fc; --m4:#f472b6; --m5:#22d3ee; --m6:#a3e635; --m7:#a8a29e;
   --bs:70%; --bl:65%;
   --run1:#6ea0ff; --run2:#f0a53c; --brk:#7d6d5a; --good:#7fd09c; --bad:#f08b82; --link:#e07b45;
-  --panel-a:84%; --scrim:84%;
+  --panel-a:94%; --scrim:92%;
 }
 :root[data-theme="light"]{
   color-scheme:light;
@@ -16,7 +16,7 @@
   --m0:#2563eb; --m1:#d97706; --m2:#15803d; --m3:#9333ea; --m4:#db2777; --m5:#0891b2; --m6:#65a30d; --m7:#78716c;
   --bs:70%; --bl:42%;
   --run1:#2563eb; --run2:#d97706; --brk:#8a93a6; --good:#15803d; --bad:#b91c1c; --link:#1d4ed8;
-  --panel-a:88%; --scrim:78%;
+  --panel-a:95%; --scrim:90%;
 }
 :root[data-theme="contrast"]{
   color-scheme:dark;
@@ -32,7 +32,7 @@
   --m0:#5fb3ff; --m1:#f4b860; --m2:#52e0a0; --m3:#b79cff; --m4:#ff8fb1; --m5:#35e0e8; --m6:#b7e35a; --m7:#9fb3bd;
   --bs:70%; --bl:65%;
   --run1:#5fb3ff; --run2:#f4b860; --brk:#5d7886; --good:#52e0a0; --bad:#ff8f86; --link:#6fd0e0;
-  --panel-a:84%; --scrim:84%;
+  --panel-a:94%; --scrim:92%;
 }
 :root[data-theme="forest"]{
   color-scheme:dark;
@@ -40,7 +40,7 @@
   --m0:#6ea8ff; --m1:#f0b04a; --m2:#6fe08a; --m3:#c39bff; --m4:#f48fb8; --m5:#3ad6d0; --m6:#c6ea50; --m7:#a8b09f;
   --bs:70%; --bl:65%;
   --run1:#6ea8ff; --run2:#f0b04a; --brk:#66806d; --good:#6fe08a; --bad:#f2877e; --link:#b5de6a;
-  --panel-a:84%; --scrim:84%;
+  --panel-a:94%; --scrim:92%;
 }
 *{box-sizing:border-box}
 body{margin:0;background:transparent;color:var(--text);font:15px/1.5 "Exo 2","Segoe UI",Tahoma,sans-serif;-webkit-font-smoothing:antialiased}
@@ -167,7 +167,7 @@ footer{padding:20px 16px 40px;font-size:.9rem}
 #headline details.box{margin:12px 0 0}
 #headline details .box{border:0;padding:6px 0;margin:6px 0}
 .method h3{margin:1.2rem 0 .3rem}
-.method > summary,#coverage-det > summary{font-size:1.15rem}
+.method > summary,#coverage-det > summary{font-size:1.05rem}
 .method > summary{padding:2px 0}
 .howto{margin:.4rem 0}
 pre{margin:.5rem 0;padding:8px 12px;overflow-x:auto;background:var(--grid);border-radius:8px}
@@ -227,3 +227,34 @@ header.wrap{padding-top:12px}
 .mpick-item{display:inline-flex!important;align-items:center;gap:4px;margin:2px 0}
 .linkbtn{background:none;border:0;padding:0;color:var(--accent,#e9a15b);text-decoration:underline;cursor:pointer;font:inherit}
 #samecommit td:first-child{min-width:13rem}
+
+/* Quieter page: cards only for the headline and the changes timeline; later sections are plain. */
+.chart .brk{opacity:.45}
+.q{font-weight:400;color:var(--muted);font-size:.8em;cursor:help}
+.hl-sub{margin:.2rem 0 .6rem;font-size:1.15rem}
+.hl-sub .muted{font-size:.8rem}
+.verdict{margin:0 0 .6rem;font-weight:600}
+.verdict.good{color:var(--good)} .verdict.bad{color:var(--bad)}
+.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+.tile .d{font-size:1.7rem;font-weight:700;line-height:1.15;color:var(--muted)}
+.tile .d.good{color:var(--good)} .tile .d.bad{color:var(--bad)}
+.tile .v{font-size:.85rem;font-weight:400;color:var(--muted)}
+.tile .l{font-size:.8rem}
+.hl-note{margin:.5rem 0}
+details.allm{margin:10px 0 0}
+details.allm .cmp-h{font-size:.95rem}
+.plain{margin:18px 0;padding:8px 0 0;border-top:1px solid var(--line)}
+.plain > summary{font-size:1.05rem;font-weight:600;color:var(--muted)}
+.minor{margin:18px 0}
+.minor h2{font-size:1.05rem;color:var(--muted);margin:.4rem 0 .4rem}
+#breakdown-sec #breakdown{margin-top:6px}
+.ctlrow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.seg button,.seg-btn{font:inherit;font-size:.88rem;color:var(--muted);background:transparent;border:0;padding:3px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--bg);font-weight:600}
+.seg-btn{border:1px solid var(--line);border-radius:999px}
+.seg-btn[aria-pressed="true"]{border-color:var(--accent);color:var(--text)}
+.mcard.compact{background:transparent;border:0;padding:0}
+.tl-body details.runs{margin:2px 0}
+.tl-body .small{margin:.2rem 0}
+@media (max-width:560px){.tile .d{font-size:1.25rem}.tile{padding-left:10px}.tiles{gap:6px}}

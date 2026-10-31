@@ -28,53 +28,40 @@
 </div></div>
 <header class="wrap">
   <h1>Meitou daily benchmarks</h1>
-  <p class="lead">Fixed benchmarks of <a href="https://github.com/VlcekM/MeitouClient">Meitou</a>, a C#/.NET Vulkan reimplementation of Kenshi,
-  run after each upstream <code>master</code> update. <strong>Lower is better for every metric.</strong></p>
+  <p class="lead">Daily benchmarks of <a href="https://github.com/VlcekM/MeitouClient">Meitou</a> (Kenshi reimplementation). Lower is better.</p>
 </header>
 
 <main class="wrap">
   <section id="headline-sec">
-    <h2>Previous &rarr; latest master</h2>
+    <h2>Latest master</h2>
     <div id="headline"></div>
   </section>
 
   <section id="charts-sec">
     <h2>Over time</h2>
-    <p class="muted">One point per benchmarked commit, oldest on the left. Hover or focus a point for details.</p>
     <div id="controls" class="controls"></div>
     <p id="caveat" class="caveat" hidden></p>
     <div id="samecommit" hidden></div>
     <div id="scenarios"></div>
   </section>
 
-  <section id="breakdown-sec">
-    <h2>Where the frame time goes</h2>
-    <p class="muted">Time per stage of the game's F12 profiler, by commit. Click a stage name to show or hide its line.</p>
-    <details class="howto">
-      <summary>How to read these charts</summary>
-      <p>Same stages and names as the F12 profiler. CPU is the render thread's time per stage (uploads, cull and bake have no CPU line);
-      GPU is measured with timestamp queries (driver-wait has no GPU line; "other" is GPU time outside the stamped stages).
-      The CPU and GPU lines are of the same frames but run in parallel, so they do not add up to the frame time.
-      Values are per-stage distributions over the frames after the settle phase.</p>
-    </details>
+  <details class="plain" id="breakdown-sec">
+    <summary>Where the frame time goes <span class="q" tabindex="0" title="CPU and GPU lines run in parallel and don't add up.">(?)</span></summary>
     <div id="breakdown"></div>
-  </section>
-
-  <section class="box" id="compare-sec" hidden>
-    <h2>Compare two commits</h2>
-    <p class="muted">Pick any two benchmarked commits: A is the before, B the after, and Change = B minus A. The selection is kept in the page address, so a comparison can be linked.</p>
-    <div id="compare"></div>
-  </section>
+  </details>
 
   <section id="timeline-sec">
-    <h2>Changes between benchmarks</h2>
-    <p class="muted">Newest first. Summaries are taken from upstream commit messages only, not reviewed.
-    Areas are taken from the files each commit changes (subject prefix only breaks ties).</p>
-    <p class="muted small" id="tl-legend"></p>
+    <h2>Changes between benchmarks <span class="q" tabindex="0" title="From upstream commit messages, unreviewed">(?)</span></h2>
     <div id="timeline"></div>
   </section>
 
-  <details class="box method" id="method">
+  <details class="plain" id="compare-sec" hidden>
+    <summary>Compare two commits</summary>
+    <p class="muted small">Pick A (before) and B (after).</p>
+    <div id="compare"></div>
+  </details>
+
+  <details class="plain method" id="method">
     <summary>How this is measured</summary>
     <h3>Setup</h3>
     <p class="muted">Fixed for every run, so numbers from different days are comparable.</p>
@@ -92,38 +79,31 @@
     (camera segments idle, orbit, zoom, pan); the <strong>base switch</strong> jumps the camera four times between the two bases.
     "Slow-world tick" is the game's own timing of its slowest simulation ticks.</p>
     <h3 id="method-runs">Runs and series</h3>
-    <p>Each benchmark is run twice back-to-back. Run 1 may be cache-cold (disk cache, shader cache) and often looks worse; run 2 is the warm one.
-    Runs are never averaged together; older single-run data counts as run 1. Within one commit and scenario, runs are numbered by time:
-    run 1 is drawn as a filled circle, run 2 as a hollow diamond. The "Runs shown" control above the charts picks which are drawn.</p>
+    <p>Each benchmark is run twice back-to-back: run 1 may be cache-cold (disk and shader cache) and often looks worse, so the page shows run 2 (warm) by default and never averages runs.
+    A series is a stretch of data taken with one procedure, and a jump across a series break on the charts may come from the procedure rather than the code.</p>
     <ul id="series-list"></ul>
-    <p class="muted">Series break lines on the charts mark where the procedure changed, so a jump across one may come from the
-    procedure rather than from the code. Cache-cold run 1 in series 2 is the closest match to series 1's single runs.</p>
     <h3>Off-target commits</h3>
-    <p>A benchmark target is a commit everyone is asked to run, so results can be compared. An off-target commit is one that is not a target
-    (for example an older commit run later to fill in history). It is drawn faded in the charts, not connected by lines, and left out of comparisons between machines.
-    The commit order everywhere is upstream's, not the order the runs were made in.</p>
+    <p>A benchmark target is a commit everyone is asked to run; an off-target commit is any other (for example an older one run later to fill in history).
+    It is drawn faded and unconnected in the charts and left out of comparisons between machines.</p>
   </details>
 
-  <section id="machines-sec">
+  <section class="minor" id="machines-sec">
     <h2>Machines</h2>
-    <p class="muted">Who ran the benchmark, on what. Contributors submit results by pull request (see CONTRIBUTING.md in the repository); the handle links to their GitHub profile.</p>
     <div id="machines"></div>
+    <details class="plain" id="coverage-det">
+      <summary>Coverage: which machine ran which commit</summary>
+      <div id="coverage"></div>
+    </details>
   </section>
 
-  <details class="box" id="coverage-det">
-    <summary>Coverage: which machine ran which commit</summary>
-    <div id="coverage"></div>
-  </details>
-
-  <section id="contribute-sec" class="box">
+  <section class="minor" id="contribute-sec">
     <h2>Contribute</h2>
     <div id="standard"></div>
-    <p>Raw data: <a href="data/bench.json">data/bench.json</a> holds every benchmark row and the change lists used on this page.</p>
   </section>
 </main>
 
 <footer class="wrap muted">
-  <p>This page is not affiliated with Lo-Fi Games or Kenshi's makers. Meitou is a separate project.</p>
+  <p>This page is not affiliated with Lo-Fi Games or Kenshi's makers. Meitou is a separate project. Raw data: <a href="data/bench.json">data/bench.json</a></p>
 </footer>
 <div id="tip" role="tooltip" hidden></div>
 <noscript><p class="wrap">This page needs JavaScript to draw the charts; the numbers are in <a href="data/bench.json">data/bench.json</a>.</p></noscript>
