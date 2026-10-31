@@ -35,6 +35,11 @@ jobs:
           cp -r index.html assets _site/
           mkdir _site/data
           cp data/bench.json _site/data/
+          # Cache-busting: Pages lets browsers keep files ~10 min, and a cached page with a newer script breaks it.
+          v=$(git rev-parse --short HEAD)
+          sed -i "s|assets/style.css\"|assets/style.css?v=$v\"|; s|assets/app.js\"|assets/app.js?v=$v\"|" _site/index.html
+          sed -i "s|fetch(\"data/bench.json\")|fetch(\"data/bench.json?v=$v\")|" _site/assets/app.js
+          grep -q "app.js?v=$v" _site/index.html && grep -q "bench.json?v=$v" _site/assets/app.js
 
       - uses: actions/upload-pages-artifact@v3
         with:

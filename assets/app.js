@@ -15,7 +15,7 @@
   ]);
   var NS = "http://www.w3.org/2000/svg";
   var D = null;
-  var state = { tlAll: false, selected: {}, runMode: "warm", relative: false, more: false, bdAll: {}, ref: "", bdStat: 0, bdMachine: "", bdOff: {}, bdOn: {} };
+  var state = { tlAll: false, selected: {}, hm: "", runMode: "warm", relative: false, more: false, bdAll: {}, ref: "", bdStat: 0, bdMachine: "", bdOff: {}, bdOn: {} };
   var tip = document.getElementById("tip");
 
   function el(tag, attrs, text) {
@@ -52,17 +52,25 @@
   }
   // Dropdown label: commit date, version tag if any, then the short hash.
   function clabel(c) { return cdate(c) + (ctag(c) ? " " + ctag(c) : "") + "  " + short(c.commit); }
-  function mname(m) { return m.name || m.id; }
+  function mname(m) { return m.label || m.github || m.id; }
   // Platform of a machine: native = the Linux build on Linux, proton = the Windows build under Proton on Linux.
-  var PLAT = { native: "Linux native", proton: "Linux Proton", windows: "Windows", macos: "macOS" };
+  var PLAT = { native: "Native Linux", proton: "Proton", windows: "Win", macos: "macOS" };
+  var PLAT_LONG = { native: "Native Linux build", proton: "Windows build under Proton on Linux", windows: "Windows build", macos: "macOS build" };
+  // Shown resolution: the screen size when the machine file gives one, else the size the benchmark rendered at; the tooltip keeps the render size.
+  function mres(m) { return m.screen || m.resolution; }
+  function mresTip(m) { return m.screen && m.screen !== m.resolution ? m.screen + " screen, renders at " + m.resolution : m.resolution; }
   function platLabel(m) { return PLAT[m.platform] || m.platform; }
-  function platChip(m) { return '<span class="chip plat plat-' + esc(m.platform) + '" title="platform of this machine\'s runs">' + esc(platLabel(m)) + "</span>"; }
+  // Does this machine have average-fps values at all? (older kit versions do not record it)
+  function hasFps(m) { return D.rows.some(function (r) { return r.machine === m.id && r.metrics.avg_fps != null; }); }
+  function anyFps(ms) { return ms.some(hasFps); }
+  // The one machine the headline and the timeline numbers come from: the one named by ?m= in the address, else the maintainer, else the first selected.
+  function pageMachine() {
+    var sel = selectedMachines();
+    return sel.filter(function (m) { return m.id === state.hm; })[0] || sel.filter(function (m) { return m.maintainer; })[0] || sel[0];
+  }
+  function metricsFor(mlist, list) { return list.filter(function (mt) { return mt.key !== "avg_fps" || anyFps(mlist); }); }
   function mcolor(m) { return "var(--m" + (D.machines.indexOf(m) % 8) + ")"; }
   function mdot(m) { return '<span class="dot" style="background:' + mcolor(m) + '"></span>'; }
-  function handleLink(m) {
-    if (!m.github) return "";
-    return '<a href="https://github.com/' + encodeURIComponent(m.github) + '">@' + esc(m.github) + "</a>";
-  }
   function machineById(id) { return D.machines.filter(function (m) { return m.id === id; })[0]; }
   function selectedMachines() { return D.machines.filter(function (m) { return state.selected[m.id]; }); }
   function multi() { return D.machines.length > 1; }
@@ -289,7 +297,7 @@
     var t = el("table", { class: "cmp" });
     t.innerHTML = "<thead><tr><th>Metric</th><th>" + esc(short(ca.commit)) + "</th><th>" + esc(short(cb.commit)) + "</th><th>Change</th><th>%</th></tr></thead>";
     var tb = el("tbody");
-    ALLM.forEach(function (mt) {
+    metricsFor([m], ALLM).forEach(function (mt) {
       var x = val(m, ca.commit, sid, mt.key), y = val(m, cb.commit, sid, mt.key), tr = el("tr");
       tr.appendChild(el("td", {}, mt.label));
       tr.appendChild(el("td", {}, x == null ? "n/a" : fmt(x)));
@@ -476,7 +484,7 @@
       var grid = el("div", { class: "charts" });
       sec.appendChild(grid);
       host.appendChild(sec);
-      METRICS.filter(function (mt) { return mt.primary || state.more; }).forEach(function (mt) { chart(grid, mt, sid, commits, first); first = false; });
+      metricsFor(selectedMachines(), METRICS).filter(function (mt) { return mt.primary || state.more; }).forEach(function (mt) { chart(grid, mt, sid, commits, first); first = false; });
       var bsec = el("section", { class: "scen" });
       bhost.appendChild(bsec);
       bdSection(bsec, sid, commits);
@@ -490,7 +498,7 @@
     var host = document.getElementById("headline");
     host.innerHTML = "";
     var commits = commitsShown(), sel = selectedMachines();
-    var mc = sel.filter(function (m) { return m.maintainer; })[0] || sel[0];
+    var mc = pageMachine();
     if (!mc) return;
     var shown = commits.filter(function (c) { return D.rows.some(function (r) { return r.commit === c.commit && r.machine === mc.id; }); });
     var cur = shown[shown.length - 1], prev = shown[shown.length - 2];
@@ -515,7 +523,7 @@
         verdict.textContent = (dl.cls === "" ? "No clear change" : dl.d < 0 ? "Faster" : "Slower") + ": p99 " + (dl.pct == null ? dFmt(dl.d) : pctFmt(dl.pct));
       }
       card.appendChild(verdict);
-      TILES.forEach(function (t) {
+      TILES.filter(function (t) { return t[0] !== "avg_fps" || hasFps(mc); }).forEach(function (t) {
         var v = val(mc, cur.commit, sid, t[0]), pv = prev ? val(mc, prev.commit, sid, t[0]) : null, big = "", cls = "", small = "";
         if (v != null && pv != null) {
           var d2 = delta(pv, v, t[3]);
@@ -565,26 +573,27 @@
     }
     if (!found) return;
     host.hidden = false;
-    host.appendChild(el("h2", {}, "Same commit, different machines"));
-    var p = el("p", { class: "muted" });
-    p.innerHTML = "Latest benchmark target run by more than one machine: " +
-      '<a class="sha" href="' + REPO + "/commit/" + esc(found.t.commit_full) + '">' + esc(found.t.commit) + "</a> (" + esc(found.t.label) + "), " + esc(found.t.date) +
-      ". A commit that is code-identical to the target counts for it. Different GPU, CPU, resolution or platform change every number, so read this as a hardware comparison, not a code comparison.";
+    var h2 = el("h2", {}, "Same commit, different machines ");
+    h2.appendChild(el("span", { class: "q", tabindex: "0", title: "Different GPU, CPU, resolution or platform change every number, so read this as a hardware comparison, not a code comparison. A commit that is code-identical to the target counts for it." }, "(?)"));
+    host.appendChild(h2);
+    var p = el("p", { class: "muted small" });
+    p.innerHTML = '<a class="sha" href="' + REPO + "/commit/" + esc(found.t.commit_full) + '">' + esc(found.t.commit) + "</a> (" + esc(found.t.label) + "), " + esc(found.t.date);
     host.appendChild(p);
+    var cols = metricsFor(found.ms, METRICS);
     Object.keys(D.scenarios).forEach(function (sid) {
       var any = found.ms.some(function (m) { return targetRows(m, found.t, sid).length; });
       if (!any) return;
       var html = "<h3>" + esc(D.scenarios[sid].title) + "</h3>" +
-        '<div class="tablewrap"><table><thead><tr><th>Machine</th><th>Platform</th><th>GPU</th><th>Resolution</th><th>Runs shown</th>';
-      ALLM.forEach(function (mt) { html += "<th>" + esc(mt.label) + "</th>"; });
+        '<div class="tablewrap"><table><thead><tr><th>Machine</th><th>Runs</th>';
+      cols.forEach(function (mt) { html += "<th>" + esc(mt.label) + "</th>"; });
       html += "</tr></thead><tbody>";
       found.ms.forEach(function (m) {
         var all = targetRows(m, found.t, sid), rs = pick(all);
         if (!rs.length) return;
-        html += "<tr><td>" + mdot(m) + esc(mname(m)) + " " + handleLink(m) + "</td><td>" + platChip(m) + "</td><td>" + esc(m.gpu) + "</td><td>" + esc(m.resolution) +
-          "</td><td>" + rs.map(function (r) { return "run " + r.run; }).join(", ") + (all[0].commit !== found.t.commit ? " (commit " + esc(all[0].commit) + ")" : "") + "</td>";
-        ALLM.forEach(function (mt) {
-          html += "<td>" + rs.map(function (r) { return fmt(r.metrics[mt.key]); }).join(" / ") + "</td>";
+        html += '<tr><td title="' + esc(m.cpu + "; " + m.gpu + "; " + mresTip(m) + "; " + (PLAT_LONG[m.platform] || m.platform)) + '">' + mdot(m) + esc(mname(m)) +
+          "</td><td>" + rs.map(function (r) { return r.run; }).join(", ") + (all[0].commit !== found.t.commit ? ' <span class="muted" title="code-identical commit ' + esc(all[0].commit) + '">*</span>' : "") + "</td>";
+        cols.forEach(function (mt) {
+          html += "<td>" + rs.map(function (r) { return r.metrics[mt.key] == null ? "\u2013" : fmt(r.metrics[mt.key]); }).join(" / ") + "</td>";
         });
         html += "</tr>";
       });
@@ -620,7 +629,7 @@
     });
     html += "</tr></thead><tbody>";
     D.machines.forEach(function (m) {
-      html += "<tr><td>" + mdot(m) + esc(mname(m)) + " " + platChip(m) + "</td>";
+      html += "<tr><td>" + mdot(m) + esc(mname(m)) + "</td>";
       cols.forEach(function (x) {
         var has, variant = false;
         if (x.off) has = D.rows.some(function (r) { return r.machine === m.id && r.commit === x.c.commit; });
@@ -634,9 +643,7 @@
       html += "</tr>";
     });
     html += "</tbody></table></div>";
-    var off = D.commits.filter(function (c) { return c.off_target; });
-    host.innerHTML = html + '<p class="muted small">Columns are in upstream commit order (the date is the commit\'s own date). Bold headers are release targets: anchor points every machine should run at least once. * = a different commit that is code-identical to the target (only docs, site, tests, .github, tools or *.md differ).' +
-      (off.length ? " Faded columns are off-target commits (" + off.map(function (c) { return esc(c.commit); }).join(", ") + "): not benchmark targets, shown faded in the charts and left out of comparisons between machines." : "") + "</p>";
+    host.innerHTML = html + '<p class="muted small">Upstream commit order. Bold = release target; * = code-identical commit; faded = off-target.</p>';
   }
 
   function renderStandard() {
@@ -662,21 +669,20 @@
       out + "</tbody></table></div>";
   }
 
-  // Mean over the selected machines of p99 on the page's basis (see val()), or null.
-  function meanP99(commit, sid) {
-    var xs = [];
-    selectedMachines().forEach(function (m) { var v = val(m, commit, sid, "p99_ms"); if (v != null) xs.push(v); });
-    return xs.length ? xs.reduce(function (a, b) { return a + b; }, 0) / xs.length : null;
+  // p99 on the page's basis (see val()) of the page machine only: machines are never mixed in one number.
+  function pageP99(commit, sid) {
+    var m = pageMachine();
+    return m ? val(m, commit, sid, "p99_ms") : null;
   }
   var SCEN_SHORT = { play: "play", bases: "base switch" };
   function summaryLine(c, prev) {
     var parts = [];
     Object.keys(D.scenarios).forEach(function (key) {
       var sc = D.scenarios[key], sid = key;
-      var v = meanP99(c.commit, sid);
+      var v = pageP99(c.commit, sid);
       if (v == null) return;
       var txt = (SCEN_SHORT[sid] || sc.title.toLowerCase()) + " p99 " + fmt(v) + " ms";
-      var pv = prev && prev.series === c.series ? meanP99(prev.commit, sid) : null;
+      var pv = prev && prev.series === c.series ? pageP99(prev.commit, sid) : null;
       if (pv != null && pv > 0) {
         var dl = delta(pv, v), cls = dl.cls || "tl-flat";
         txt += ' <span class="tl-d ' + cls + '" title="vs ' + esc(prev.commit) + ' (' + esc(fmt(pv)) + ' ms)">' + pctFmt(dl.pct) + "</span>";
@@ -689,6 +695,8 @@
   function renderTimeline() {
     var host = document.getElementById("timeline");
     host.innerHTML = "";
+    var tq = document.getElementById("tlq"), pm = pageMachine();
+    if (tq) tq.title = "From upstream commit messages, unreviewed." + (multi() && pm ? " Numbers: " + mname(pm) + "." : "");
     var asc = commitsShown();
     var list = asc.slice().reverse();
     var LIMIT = 5;
@@ -767,7 +775,7 @@
     var host = document.getElementById("machines");
     host.innerHTML = "";
     D.machines.forEach(function (m) {
-      var card = el("label", { class: "mcard" + (multi() ? "" : " compact") });
+      var card = el("label", { class: "mcard" + (multi() ? "" : " compact"), title: m.notes || "" });
       var cb = el("input", { type: "checkbox" });
       cb.checked = !!state.selected[m.id];
       if (!multi()) cb.hidden = true;
@@ -778,29 +786,22 @@
       });
       card.appendChild(cb);
       var body = el("div", { class: "mbody" });
-      if (!multi()) {
-        body.innerHTML = (m.github ? handleLink(m) : esc(mname(m))) + " - " + esc(m.cpu) + ", " + esc(m.gpu) + ", " + esc(platLabel(m)) + ", " + esc(m.resolution);
-        card.appendChild(body); host.appendChild(card); return;
-      }
-      body.innerHTML =
-        '<div class="mtitle">' + mdot(m) + "<b>" + esc(mname(m)) + "</b> " + handleLink(m) + " " + platChip(m) + (m.maintainer ? ' <span class="chip">maintainer</span>' : "") + "</div>" +
-        '<div class="muted">' + esc(m.cpu) + "; " + esc(m.gpu) + "; " + esc(String(m.ram_gb)) + " GB RAM; " + esc(m.os) + "</div>" +
-        "<div>Renders at <b>" + esc(m.resolution) + "</b> - " + m.commit_count + " benchmarked commit" + (m.commit_count === 1 ? "" : "s") +
-        ", newest " + esc(lastCommitDate(m)) + "</div>" +
-        (m.notes ? '<div class="muted">' + esc(m.notes) + "</div>" : "");
+      var head = (multi() ? mdot(m) : "") + '<b>' + esc(mname(m)) + "</b> " + (m.github ? '<a href="https://github.com/' + encodeURIComponent(m.github) + '" title="GitHub profile" aria-label="GitHub profile of ' + esc(m.github) + '">&#8599;</a>' : "") +
+        '<span class="muted"> \u00b7 ' + esc([m.cpu, m.gpu, m.os, mres(m)].join(" \u00b7 ")) + "</span>";
+      body.innerHTML = '<div class="mtitle">' + head + "</div>" +
+        '<div class="muted small">' + m.commit_count + " benchmarked commit" + (m.commit_count === 1 ? "" : "s") + ", latest " + esc(lastCommitDate(m)) + "</div>";
       card.appendChild(body);
       host.appendChild(card);
     });
   }
 
-  // Machine picker next to the charts: one checkbox per machine (the cards in "Machines" below do the same); at least one stays selected.
+  // Machine chips next to the run controls: one checkbox per machine (the cards in "Machines" below do the same); at least one stays selected.
   function renderPicker() {
     var host = document.getElementById("mpick");
     if (!host) return;
-    host.innerHTML = "<legend>Machines shown</legend>";
-    var row = el("div", { class: "mpick-row" });
+    host.innerHTML = "";
     D.machines.forEach(function (m) {
-      var l = el("label", { class: "mpick-item", title: m.cpu + "; " + m.gpu + "; " + m.resolution }), cb = el("input", { type: "checkbox" });
+      var l = el("label", { class: "chip mchip", title: m.cpu + "; " + m.gpu + "; " + mresTip(m) + "; " + (PLAT_LONG[m.platform] || m.platform) }), cb = el("input", { type: "checkbox" });
       cb.checked = !!state.selected[m.id];
       cb.addEventListener("change", function () {
         state.selected[m.id] = cb.checked;
@@ -808,18 +809,9 @@
         renderResults();
       });
       l.appendChild(cb);
-      l.insertAdjacentHTML("beforeend", " " + mdot(m) + esc(mname(m)) + " " + platChip(m));
-      row.appendChild(l);
+      l.insertAdjacentHTML("beforeend", " " + mdot(m) + esc(mname(m)));
+      host.appendChild(l);
     });
-    host.appendChild(row);
-    var q = el("p", { class: "muted small" });
-    q.appendChild(document.createTextNode("Tick the machines to draw; each has its own colour in the charts. "));
-    [["All", function () { return true; }], ["Only the first", function (m, i) { return i === 0; }]].forEach(function (o) {
-      var b = el("button", { type: "button", class: "linkbtn" }, o[0]);
-      b.addEventListener("click", function () { D.machines.forEach(function (m, i) { state.selected[m.id] = o[1](m, i); }); renderResults(); });
-      q.appendChild(b); q.appendChild(document.createTextNode(" "));
-    });
-    host.appendChild(q);
   }
 
   function renderControls() {
@@ -839,42 +831,38 @@
     host.appendChild(row);
 
     if (multi()) {
-      host.appendChild(el("fieldset", { class: "ctl ctl-wide", id: "mpick" }));
-      renderPicker();
-      var rel = el("fieldset", { class: "ctl" });
-      rel.innerHTML = "<legend>Compare machines</legend>";
-      var l = el("label"), cb = el("input", { type: "checkbox" });
-      cb.checked = state.relative;
-      cb.addEventListener("change", function () { state.relative = cb.checked; renderControls(); renderResults(); });
-      l.appendChild(cb); l.appendChild(document.createTextNode(" Relative to each machine's own baseline (% of own value)"));
-      rel.appendChild(l);
-      var l2 = el("label", { class: "reflab" });
-      l2.appendChild(document.createTextNode("Baseline commit "));
-      var sel = el("select"); sel.disabled = !state.relative;
-      sel.appendChild(el("option", { value: "" }, "each machine's first target"));
-      D.targets.forEach(function (t) { sel.appendChild(el("option", { value: t.commit }, short(t.commit) + " " + t.label)); });
-      sel.value = state.ref;
-      sel.addEventListener("change", function () { state.ref = sel.value; renderResults(); });
-      l2.appendChild(sel); rel.appendChild(l2);
-      rel.appendChild(el("p", { class: "muted small" }, "100% is the machine's own value at the baseline commit, so the shape of a trend can be compared across different hardware. Only benchmark targets can be a baseline; a machine that did not run the chosen one gets no line."));
-      host.appendChild(rel);
+      row.appendChild(el("span", { class: "mpick", id: "mpick" }));
+      var rb = el("button", { type: "button", class: "seg-btn", "aria-pressed": state.relative ? "true" : "false",
+        title: "100% is the machine's own value at the baseline commit, so trends can be compared across different hardware. Only benchmark targets can be a baseline." }, "Relative to own baseline");
+      rb.addEventListener("click", function () { state.relative = !state.relative; renderControls(); renderResults(); });
+      row.appendChild(rb);
+      if (state.relative) {
+        var sel = el("select", { "aria-label": "Baseline commit" });
+        sel.appendChild(el("option", { value: "" }, "each machine's first target"));
+        D.targets.forEach(function (t) { sel.appendChild(el("option", { value: t.commit }, short(t.commit) + " " + t.label)); });
+        sel.value = state.ref;
+        sel.addEventListener("change", function () { state.ref = sel.value; renderResults(); });
+        row.appendChild(sel);
+      }
+      row.appendChild(el("span", { class: "q", id: "cavq", tabindex: "0", hidden: "" }, "(?)"));
     }
+    renderPicker();
   }
 
   function renderCaveat() {
-    var host = document.getElementById("caveat");
-    var sel = selectedMachines();
-    host.hidden = true;
+    var q = document.getElementById("cavq"), sel = selectedMachines();
+    if (!q) return;
+    q.hidden = true;
     if (sel.length < 2 || state.relative) return;
     var res = {}, gpu = {}, plat = {};
     sel.forEach(function (m) { res[m.resolution] = 1; gpu[m.gpu] = 1; plat[m.platform] = 1; });
     var diff = [];
     if (Object.keys(gpu).length > 1) diff.push("GPUs");
     if (Object.keys(res).length > 1) diff.push("resolutions");
-    if (Object.keys(plat).length > 1) diff.push("platforms (" + Object.keys(plat).map(function (p) { return PLAT[p] || p; }).join(", ") + ": different operating system, graphics driver stack and build)");
-    host.textContent = "Caution: absolute values of machines with different " + (diff.length ? diff.join(" and ") : "CPUs or drivers") +
-      " are not comparable. A faster GPU at a lower resolution is not a code improvement. Use \"relative to own baseline\" to compare trends, or compare machines of the same hardware and resolution.";
-    host.hidden = false;
+    if (Object.keys(plat).length > 1) diff.push("platforms");
+    q.title = "Absolute values of machines with different " + (diff.length ? diff.join(" and ") : "CPUs or drivers") +
+      " are not comparable (a faster GPU at a lower resolution is not a code improvement). Use \"Relative to own baseline\" to compare trends.";
+    q.hidden = false;
   }
 
   // ---- Compare two commits ----
@@ -920,6 +908,7 @@
   function cmpReadUrl() {
     var p = new URLSearchParams(location.search);
     var m = p.get("m");
+    state.hm = m && machineById(m) ? m : "";
     cmp.m = m && machineById(m) ? m : (D.machines.filter(function (x) { return x.maintainer; })[0] || D.machines[0]).id;
     var list = cmpCommits(cmp.m);
     cmpDefaults(list);
@@ -943,14 +932,15 @@
       var s = el("select");
       list.forEach(function (c) { s.appendChild(el("option", { value: c.commit }, clabel(c) + " - " + daysAgo(c))); });
       s.value = cmp[key];
+      Array.prototype.forEach.call(s.options, function (o, i) { if (o.value === cmp[key]) s.selectedIndex = i; });
       s.addEventListener("change", function () { cmp[key] = s.value; cmpUrl(); renderCompare(); });
       l.appendChild(s); return l;
     }
     if (multi()) {
       var ml = el("label", { class: "cmp-pick" }, "Machine ");
       var ms = el("select");
-      D.machines.forEach(function (m) { ms.appendChild(el("option", { value: m.id }, mname(m) + " (" + platLabel(m) + ")")); });
-      ms.value = cmp.m;
+      D.machines.forEach(function (m) { ms.appendChild(el("option", { value: m.id }, mname(m))); });
+      Array.prototype.forEach.call(ms.options, function (o, i) { if (o.value === cmp.m) ms.selectedIndex = i; });
       ms.addEventListener("change", function () { cmp.m = ms.value; cmpDefaults(cmpCommits(cmp.m)); cmpUrl(); renderCompare(); });
       ml.appendChild(ms); bar.appendChild(ml);
     }
@@ -1002,8 +992,9 @@
   function init(d) {
     D = d;
     D.machines.forEach(function (m) { state.selected[m.id] = true; });
+    cmpReadUrl();
     renderStandard(); renderSeries(); renderControls(); renderResults();
-    cmpReadUrl(); renderCompare();
+    renderCompare();
     document.getElementById("coverage-det").open = multi();
     openHash();
     var t; window.addEventListener("resize", function () { clearTimeout(t); t = setTimeout(renderScenarios, 150); });

@@ -37,7 +37,6 @@ Fork this repository and add, in your fork:
    {
      "id": "ryzen5600-rx6800-linux",
      "github": "your-github-handle",
-     "name": "Optional display name",
      "cpu": "AMD Ryzen 5 5600",
      "gpu": "AMD Radeon RX 6800",
      "ram_gb": 32,
@@ -50,7 +49,7 @@ Fork this repository and add, in your fork:
 
    Optional `"os_family": "linux" | "windows" | "macos"`: the page derives it from the platform of your results; if you give it, it must agree. `os` is free text (distribution, Windows edition, macOS version).
 
-   `id` must equal the file name without `.json`. `resolution` is the size the benchmark rendered at (the `resolution` column of your `results.csv`).
+   `id` must equal the file name without `.json`. `resolution` is the size the benchmark rendered at (the `resolution` column of your `results.csv`). Optional `"screen"` (e.g. `"2560x1440"`) is shown instead when the window is smaller than the screen; the render size stays in the tooltip.
 
 2. `data/results/<machine-id>/<date>-<commit>.csv`: your `results.csv`, unchanged. `<date>` is the day of the run (`YYYY-MM-DD`), `<commit>` the 8-digit commit from the CSV. The `machine` column, if present, must equal your machine id.
 

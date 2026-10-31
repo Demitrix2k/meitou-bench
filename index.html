@@ -40,7 +40,6 @@
   <section id="charts-sec">
     <h2>Over time</h2>
     <div id="controls" class="controls"></div>
-    <p id="caveat" class="caveat" hidden></p>
     <div id="samecommit" hidden></div>
     <div id="scenarios"></div>
   </section>
@@ -51,7 +50,7 @@
   </details>
 
   <section id="timeline-sec">
-    <h2>Changes between benchmarks <span class="q" tabindex="0" title="From upstream commit messages, unreviewed">(?)</span></h2>
+    <h2>Changes between benchmarks <span class="q" id="tlq" tabindex="0" title="From upstream commit messages, unreviewed">(?)</span></h2>
     <div id="timeline"></div>
   </section>
 
@@ -71,8 +70,8 @@
       <div><dt>Save</dt><dd>The same frozen save every run: two player bases; never played or saved over</dd></div>
       <div><dt>Graphics</dt><dd>Full settings</dd></div>
       <div><dt>Measurement</dt><dd>MangoHud frame-time logging; frame metrics come from the game's bench frames</dd></div>
-      <div><dt>Machines</dt><dd>The maintainer's laptop and machines of contributors; see "Machines" below</dd></div>
-      <div><dt>Run by</dt><dd>The maintainer after each upstream master update; contributors with the dev kit in <code>kit/</code></dd></div>
+      <div><dt>Machines</dt><dd>See "Machines" below</dd></div>
+      <div><dt>Run by</dt><dd>Anyone with the dev kit in <code>kit/</code>, after each upstream master update</dd></div>
     </dl>
     <h3>Scenarios</h3>
     <p>Two scenarios are run: the <strong>play benchmark</strong> is upstream's own <code>--play-bench</code>

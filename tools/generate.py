@@ -60,8 +60,9 @@ def breakdown_of(r):
     return out or None
 
 
+PLATFORM_SHORT = {"native": "Native Linux", "proton": "Proton", "windows": "Win", "macos": "macOS"}   # same short pills as the roadmap page
 MACHINE_REQUIRED = ["id", "github", "cpu", "gpu", "ram_gb", "os", "resolution", "added"]
-MACHINE_OPTIONAL = ["name", "notes", "os_family"]
+MACHINE_OPTIONAL = ["name", "notes", "os_family", "screen"]
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,46}[a-z0-9]$")
 HANDLE_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
 DATE_RE = re.compile(r"^\d{4}-\d\d-\d\d$")
@@ -281,6 +282,8 @@ def load_machines(data_dir, errors):
             err("github %r is not a GitHub handle (no @, no URL)" % m["github"])
         if m.get("ram_gb") not in (None, "") and not (isinstance(m["ram_gb"], (int, float)) and not isinstance(m["ram_gb"], bool) and m["ram_gb"] > 0):
             err("ram_gb must be a positive number")
+        if m.get("screen") and not RES_RE.match(str(m["screen"])):
+            err("screen %r must look like 2560x1440" % m["screen"])
         if m.get("resolution") and not RES_RE.match(str(m["resolution"])):
             err("resolution %r must look like 2560x1406" % m["resolution"])
         if m.get("added") and not DATE_RE.match(str(m["added"])):
@@ -567,6 +570,13 @@ def main():
         for k in MACHINE_OPTIONAL:
             m.setdefault(k, "")
         mlist.append(m)
+    # Display label derived from the owner's GitHub handle and the platform ("Demitrix2k · Linux"); a person's machines of one
+    # platform are told apart by GPU. The optional "name" in the machine file is no longer used.
+    for m in mlist:
+        m["label"] = "%s \u00b7 %s" % (m.get("github") or m["id"], PLATFORM_SHORT.get(m["platform"], m["platform"]))
+    for m in mlist:
+        if sum(1 for x in mlist if x["label"] == m["label"]) > 1:
+            m["label"] += " \u00b7 " + (m.get("gpu") or m["id"])
 
     tlist = []
     for t in targets:
