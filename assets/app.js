@@ -5,7 +5,8 @@
     { key: "p99_ms", label: "p99 frame time (ms)", unit: " ms", primary: true },
     { key: "over33_pct", label: "Frames over 33 ms (%)", unit: "%", primary: true },
     { key: "p50_ms", label: "p50 frame time (ms)", unit: " ms" },
-    { key: "slow_world_p99_ms", label: "Slow-world tick p99 (ms)", unit: " ms" }
+    { key: "slow_world_p99_ms", label: "Slow-world tick p99 (ms)", unit: " ms" },
+    { key: "avg_fps", label: "Average fps", unit: " fps", higher: true }
   ];
   var ALLM = METRICS.concat([
     { key: "max_ms", label: "Max frame (ms)", unit: " ms" },
@@ -102,9 +103,10 @@
     var xs = pick(rowsFor(m, commit, sid)).map(function (r) { return r.metrics[key]; }).filter(function (v) { return v != null; });
     return xs.length ? median(xs) : null;
   }
-  function delta(x, y) {
+  // higher = true for metrics where a rise is good (avg fps); every other metric is lower-is-better.
+  function delta(x, y, higher) {
     var d = y - x, pct = x ? d / x * 100 : null, rd = Math.round(d * 10) / 10;
-    return { d: d, pct: pct, cls: rd === 0 || Math.abs(pct == null ? d : pct) < 2 ? "" : d < 0 ? "good" : "bad" };
+    return { d: d, pct: pct, cls: rd === 0 || Math.abs(pct == null ? d : pct) < 2 ? "" : (d < 0) !== !!higher ? "good" : "bad" };
   }
   function pctFmt(p) {
     var r = Math.round(p * 10) / 10;
@@ -160,7 +162,7 @@
       commits.forEach(function (c, i) {
         pick(rowsFor(mc, c.commit, scen)).forEach(function (r) {
           var v = r.metrics[metric.key];
-          if (v == null) return;
+          if (v == null) { var g0 = state.runMode === "both" ? r.run : 0; (groups[g0] = groups[g0] || []).push({ i: i, gap: true }); return; }
           var rel = null;
           if (state.relative) {
             var b = baseValue(mc, scen, metric.key, r.run);
@@ -211,15 +213,19 @@
 
     lines.forEach(function (ln) {
       var col = mcolor(ln.m);
-      var on = ln.pts.filter(function (p) { return !p.off; });
-      if (on.length > 1) {
-        svg.appendChild(sv("polyline", { class: "ml" + (ln.g === 2 ? " dashed" : ""), style: "stroke:" + col,
-          points: on.map(function (p) { return X(p.i) + "," + Y(p.shown); }).join(" ") }));
-      }
+      var segs = [[]];
+      ln.pts.forEach(function (p) { if (p.gap) { if (segs[segs.length - 1].length) segs.push([]); } else if (!p.off) segs[segs.length - 1].push(p); });
+      segs.forEach(function (on) {
+        if (on.length > 1) {
+          svg.appendChild(sv("polyline", { class: "ml" + (ln.g === 2 ? " dashed" : ""), style: "stroke:" + col,
+            points: on.map(function (p) { return X(p.i) + "," + Y(p.shown); }).join(" ") }));
+        }
+      });
     });
     lines.forEach(function (ln) {
       var col = mcolor(ln.m);
       ln.pts.forEach(function (p) {
+        if (p.gap) return;
         var x = X(p.i), y = Y(p.shown), mk;
         if (p.r.run === 1) mk = sv("circle", { class: "p1" + (p.off ? " off" : ""), cx: x, cy: y, r: 5.5, style: "fill:" + col });
         else mk = sv("rect", { class: "p2" + (p.off ? " off" : ""), x: x - 4.5, y: y - 4.5, width: 9, height: 9,
@@ -285,7 +291,7 @@
       tr.appendChild(el("td", {}, y == null ? "n/a" : fmt(y)));
       if (x == null || y == null) { tr.appendChild(el("td", {}, "")); tr.appendChild(el("td", {}, "")); }
       else {
-        var dl = delta(x, y);
+        var dl = delta(x, y, mt.higher);
         tr.appendChild(el("td", { class: dl.cls }, dFmt(dl.d)));
         tr.appendChild(el("td", { class: dl.cls }, dl.pct == null ? "n/a" : pctFmt(dl.pct)));
       }
@@ -474,7 +480,7 @@
 
   // Headline: the newest benchmarked commit against the one before it (upstream order), for the primary selected machine.
   // Tiles show the change first; every number uses the same basis as Compare (see val()).
-  var TILES = [["p99_ms", "p99 frame time", " ms"], ["over33_pct", "Frames over 33 ms", "%"], ["slow_world_p99_ms", "Slow-world tick p99", " ms"]];
+  var TILES = [["p99_ms", "p99 frame time", " ms"], ["over33_pct", "Frames over 33 ms", "%"], ["slow_world_p99_ms", "Slow-world tick p99", " ms"], ["avg_fps", "Average fps", " fps", true]];
   function renderHeadline() {
     var host = document.getElementById("headline");
     host.innerHTML = "";
@@ -507,7 +513,7 @@
       TILES.forEach(function (t) {
         var v = val(mc, cur.commit, sid, t[0]), pv = prev ? val(mc, prev.commit, sid, t[0]) : null, big = "", cls = "", small = "";
         if (v != null && pv != null) {
-          var d2 = delta(pv, v);
+          var d2 = delta(pv, v, t[3]);
           cls = d2.cls; big = d2.pct == null ? dFmt(d2.d) : pctFmt(d2.pct);
           small = fmt(pv) + " \u2192 " + fmt(v) + t[2];
         } else small = (v == null ? "n/a" : fmt(v) + t[2]);
@@ -993,7 +999,6 @@
     D.machines.forEach(function (m) { state.selected[m.id] = true; });
     renderStandard(); renderSeries(); renderControls(); renderResults();
     cmpReadUrl(); renderCompare();
-    if (/[?&][ab]=/.test(location.search)) document.getElementById("compare-sec").open = true;
     document.getElementById("coverage-det").open = multi();
     openHash();
     var t; window.addEventListener("resize", function () { clearTimeout(t); t = setTimeout(renderScenarios, 150); });

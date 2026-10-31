@@ -32,6 +32,8 @@ METRICS = {  # public name -> CSV column
     "slow_world_p99_ms": "slow_world_p99_ms",
     "slow_world_max_ms": "slow_world_max_ms",
 }
+# Optional metric columns (missing column or blank cell -> null in the page data). avg_fps = 1000 / mean frame ms; higher is better.
+OPTIONAL_METRICS = {"avg_fps": "avg_fps"}
 REQUIRED_COLS = ["date", "time", "commit", "platform", "data", "save", "segments", "run"] + \
     list(METRICS.values()) + ["gpu", "nvidia_driver"]
 # Optional F12-profiler breakdown columns (see docs/scripts/bench-compare-table.py BREAKDOWN_COLS in the maintainer's notes):
@@ -467,7 +469,7 @@ def main():
         rows.append({
             "date": r["date"], "time": r["time"], "commit": short[h], "commit_full": h,
             "scenario": sc["id"], "run": counter[key],
-            "metrics": {k: num(r[c]) for k, c in METRICS.items()},
+            "metrics": dict({k: num(r[c]) for k, c in METRICS.items()}, **{k: num(r.get(c)) for k, c in OPTIONAL_METRICS.items()}),
             "breakdown": breakdown_of(r),
             "gpu": r["gpu"], "driver": r["nvidia_driver"], "machine": r["machine"],
             "platform": r["platform"], "series": series_of(r),

@@ -235,7 +235,7 @@ header.wrap{padding-top:12px}
 .hl-sub .muted{font-size:.8rem}
 .verdict{margin:0 0 .6rem;font-weight:600}
 .verdict.good{color:var(--good)} .verdict.bad{color:var(--bad)}
-.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+.tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
 .tile .d{font-size:1.7rem;font-weight:700;line-height:1.15;color:var(--muted)}
 .tile .d.good{color:var(--good)} .tile .d.bad{color:var(--bad)}
 .tile .v{font-size:.85rem;font-weight:400;color:var(--muted)}
@@ -257,4 +257,4 @@ details.allm .cmp-h{font-size:.95rem}
 .mcard.compact{background:transparent;border:0;padding:0}
 .tl-body details.runs{margin:2px 0}
 .tl-body .small{margin:.2rem 0}
-@media (max-width:560px){.tile .d{font-size:1.25rem}.tile{padding-left:10px}.tiles{gap:6px}}
+@media (max-width:560px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.tile .d{font-size:1.25rem}.tile{padding-left:10px}.tiles{gap:6px}}
