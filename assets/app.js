@@ -14,7 +14,7 @@
   ]);
   var NS = "http://www.w3.org/2000/svg";
   var D = null;
-  var state = { selected: {}, runMode: "warm", relative: false, ref: "", bdStat: 0, bdMachine: "", bdOff: {}, bdOn: {} };
+  var state = { tlAll: false, selected: {}, runMode: "warm", relative: false, ref: "", bdStat: 0, bdMachine: "", bdOff: {}, bdOn: {} };
   var tip = document.getElementById("tip");
 
   function el(tag, attrs, text) {
@@ -253,7 +253,7 @@
     var cur = shown[shown.length - 1], prev = shown[shown.length - 2];
     if (!cur) return null;
     var wrap = el("div", { class: "box" });
-    wrap.appendChild(el("h3", {}, "Latest vs previous" + (multi() ? ": " + mname(mc) : "")));
+    wrap.appendChild(el("h3", {}, "Previous \u2192 latest" + (multi() ? ": " + mname(mc) : "")));
     if (!prev) { wrap.appendChild(el("p", { class: "muted" }, "Only one benchmarked commit so far.")); return wrap; }
     var cr = rowsFor(mc, cur.commit, scen), pr = rowsFor(mc, prev.commit, scen);
     function vals(rs, k) {
@@ -281,7 +281,7 @@
     });
     t.appendChild(tb);
     var tw = el("div", { class: "tablewrap" }); tw.appendChild(t); wrap.appendChild(tw);
-    var note = "Values are run 1 / run 2 where both exist. Change compares " + (state.runMode === "warm" ? "run 2 (run 1 where there is no run 2)" : "run 1 with run 1") + ".";
+    var note = "Values are run 1 / run 2 where both exist. Change = latest minus previous (+ = higher), compared on " + (state.runMode === "warm" ? "run 2 (run 1 where there is no run 2)" : "run 1 with run 1") + ".";
     if (prev.series !== cur.series) note += " The two commits are in different series (" + seriesName(prev.series) + " vs " + seriesName(cur.series) + "), so the procedure differs.";
     wrap.appendChild(el("p", { class: "muted" }, note));
     return wrap;
@@ -491,7 +491,7 @@
     });
     host.appendChild(strip);
     var det = el("details", { class: "box" });
-    det.appendChild(el("summary", {}, "All metrics, latest vs previous"));
+    det.appendChild(el("summary", {}, "All metrics, previous \u2192 latest"));
     sel.forEach(function (m) {
       Object.keys(D.scenarios).forEach(function (sid) {
         var t = summaryFor(sid, commits, m);
@@ -616,21 +616,61 @@
       out + "</tbody></table></div>";
   }
 
+  // Mean p99 of all shown runs of a scenario at a commit (selected machines), or null.
+  function meanP99(commit, sid) {
+    var xs = [];
+    selectedMachines().forEach(function (m) {
+      rowsFor(m, commit, sid).forEach(function (r) { if (r.metrics.p99_ms != null) xs.push(r.metrics.p99_ms); });
+    });
+    return xs.length ? xs.reduce(function (a, b) { return a + b; }, 0) / xs.length : null;
+  }
+  var SCEN_SHORT = { play: "play", bases: "base switch" };
+  function summaryLine(c, prev) {
+    var parts = [];
+    Object.keys(D.scenarios).forEach(function (key) {
+      var sc = D.scenarios[key], sid = key;
+      var v = meanP99(c.commit, sid);
+      if (v == null) return;
+      var txt = (SCEN_SHORT[sid] || sc.title.toLowerCase()) + " p99 " + fmt(v) + " ms";
+      var pv = prev && prev.series === c.series ? meanP99(prev.commit, sid) : null;
+      if (pv != null && pv > 0) {
+        var d = (v - pv) / pv * 100, cls = Math.abs(d) < 2 ? "tl-flat" : d > 0 ? "bad" : "good";
+        txt += ' <span class="tl-d ' + cls + '" title="vs ' + esc(prev.commit) + ' (' + esc(fmt(pv)) + ' ms)">' + (d > 0 ? "+" : d < 0 ? "−" : "") + Math.abs(d).toFixed(1) + "%</span>";
+      }
+      parts.push('<span class="tl-m">' + txt + "</span>");
+    });
+    return parts.join("");
+  }
+
   function renderTimeline() {
     var host = document.getElementById("timeline");
     host.innerHTML = "";
-    commitsShown().slice().reverse().forEach(function (c) {
-      var box = el("article", { class: "tl" });
+    var legend = document.getElementById("tl-legend");
+    if (legend) legend.textContent = D.series.map(function (s) { return s.label + ": " + s.description; }).join(" ") +
+      " The change after each number is against the previous benchmark in the same series: red = slower, green = faster, grey = under 2%.";
+    var asc = commitsShown();
+    var list = asc.slice().reverse();
+    var LIMIT = 5;
+    list.forEach(function (c, idx) {
+      var prev = asc[asc.indexOf(c) - 1] || null;
+      var box = el("details", { class: "tl" });
+      if (idx === 0) box.open = true;
+      if (idx >= LIMIT) { box.className += " tl-old"; box.hidden = !state.tlAll; }
       var link = c.commit_full ? REPO + "/commit/" + c.commit_full : null;
       var who = selectedMachines().filter(function (m) { return D.rows.some(function (r) { return r.commit === c.commit && r.machine === m.id; }); });
+      var ch = c.changes;
+      var sum = '<summary class="tl-sum"><span class="sha">' + esc(c.commit) + "</span>" +
+        '<span class="when">' + esc(cdate(c)) + (ctag(c) ? " " + esc(ctag(c)) : "") + " &middot; " + esc(seriesName(c.series)) + "</span>" +
+        summaryLine(c, prev) +
+        (ch ? '<span class="tl-n">' + ch.commit_count + (ch.commit_count === 1 ? " commit" : " commits") + "</span>" : "") +
+        (c.off_target ? '<span class="chip off">off-target</span>' : "") + "</summary>";
       var head = '<div class="tl-head"><h3>' + (link ? '<a class="sha" href="' + link + '">' + esc(c.commit) + "</a>" : '<span class="sha">' + esc(c.commit) + "</span>") +
-        '</h3><span class="when">' + esc(cdate(c)) + (ctag(c) ? " " + esc(ctag(c)) : "") + (c.date !== cdate(c) ? " (benchmarked " + esc(c.date) + ")" : "") + (c.series != null ? " - " + esc(seriesName(c.series)) : "") + "</span>" +
+        '</h3><span class="when">' + esc(cdate(c)) + (c.date !== cdate(c) ? " (benchmarked " + esc(c.date) + ")" : "") + "</span>" +
         (multi() ? '<span class="who">' + who.map(function (m) { return mdot(m) + esc(mname(m)); }).join(" ") + "</span>" : "") + "</div>";
       var tg = D.targets.filter(function (t) { return t.commit === c.target; })[0];
       var tinfo = c.off_target ? '<span class="chip off">off-target: not a benchmark target</span>'
         : tg ? '<span class="chip">' + (c.target_exact ? "benchmark target" : "counts for target " + esc(tg.commit)) + " (" + esc(tg.label) + ")</span>" : "";
-      var html = head + (tinfo ? "<div>" + tinfo + "</div>" : "") + metricsTable(c.commit);
-      var ch = c.changes;
+      var html = sum + '<div class="tl-body">' + head + (tinfo ? "<div>" + tinfo + "</div>" : "") + metricsTable(c.commit);
       if (c.first_benchmark) {
         html += '<p class="muted">First benchmarked commit: no change list.</p>';
       } else if (!ch) {
@@ -638,12 +678,7 @@
       } else {
         html += "<p><b>" + ch.commit_count + " commits</b> since <span class=\"sha\">" + esc(ch.since) + "</span>";
         if (ch.merged_prs.length) html += ", " + ch.merged_prs.length + " merged pull request" + (ch.merged_prs.length > 1 ? "s" : "");
-        html += "</p><div>";
-        D.buckets.forEach(function (b) {
-          var n = ch.bucket_counts[b];
-          if (n) html += '<span class="chip">' + esc(b) + " <b>" + n + "</b></span>";
-        });
-        html += "</div>";
+        html += "</p>";
         if (ch.merged_prs.length) {
           html += "<details><summary>Merged pull requests (" + ch.merged_prs.length + ")</summary><ul>";
           ch.merged_prs.forEach(function (p) {
@@ -653,18 +688,28 @@
           html += "</ul></details>";
         }
         D.buckets.forEach(function (b) {
-          var list = ch.commits.filter(function (x) { return x.bucket === b; });
-          if (!list.length) return;
-          html += "<details><summary>" + esc(b) + " (" + list.length + ")</summary><ul>";
-          list.forEach(function (x) {
+          var l = ch.commits.filter(function (x) { return x.bucket === b; });
+          if (!l.length) return;
+          html += "<details><summary>" + esc(b) + " (" + l.length + ")</summary><ul>";
+          l.forEach(function (x) {
             html += '<li><a class="sha" href="' + REPO + "/commit/" + x.hash + '">' + esc(x.short) + "</a> " + linkify(x.subject) + "</li>";
           });
           html += "</ul></details>";
         });
       }
-      box.innerHTML = html;
+      box.innerHTML = html + "</div>";
       host.appendChild(box);
     });
+    if (list.length > LIMIT) {
+      var btn = el("button", { class: "tl-more", type: "button" });
+      var upd = function () { btn.textContent = state.tlAll ? "Show fewer" : "Show older (" + (list.length - LIMIT) + ")"; };
+      upd();
+      btn.addEventListener("click", function () {
+        state.tlAll = !state.tlAll; upd();
+        Array.prototype.forEach.call(host.querySelectorAll(".tl-old"), function (n) { n.hidden = !state.tlAll; });
+      });
+      host.appendChild(btn);
+    }
   }
 
   function renderSeries() {
@@ -811,7 +856,7 @@
     var n = Math.round((today - cmpTime(c)) / 86400000);
     return n <= 0 ? "today" : n === 1 ? "1 day ago" : n + " days ago";
   }
-  // B for a given A: the newest older commit whose commit date is at least a day before A's; else the previous commit.
+  // The "before" commit for a given "after" commit: the newest older commit whose commit date is at least a day before it; else the previous commit.
   function cmpOneDay(list, a) {
     var idx = list.indexOf(a), older = list.slice(idx + 1);
     for (var i = 0; i < older.length; i++) if (cmpTime(a) - cmpTime(older[i]) >= 86400000) return older[i];
@@ -819,7 +864,7 @@
   }
   function cmpDefaults(list) {
     if (!list.length) return;
-    cmp.a = list[0].commit; cmp.b = cmpOneDay(list, list[0]).commit;
+    cmp.b = list[0].commit; cmp.a = cmpOneDay(list, list[0]).commit;   // A = before (older), B = after (newer)
   }
   function cmpRows(mid, commit, scen) {
     return D.rows.filter(function (r) { return r.machine === mid && r.commit === commit && r.scenario === scen; });
@@ -869,13 +914,13 @@
       ms.addEventListener("change", function () { cmp.m = ms.value; cmpDefaults(cmpCommits(cmp.m)); cmpUrl(); renderCompare(); });
       ml.appendChild(ms); bar.appendChild(ml);
     }
-    bar.appendChild(picker("A (new)", "a"));
-    bar.appendChild(picker("B (baseline)", "b"));
+    bar.appendChild(picker("A (before)", "a"));
+    bar.appendChild(picker("B (after)", "b"));
     var quick = el("span", { class: "cmp-quick" });
     var prev = el("button", { type: "button" }, "vs previous benchmark");
     prev.addEventListener("click", function () {
-      var c = list[Math.max(0, list.map(function (x) { return x.commit; }).indexOf(cmp.a)) + 1];
-      if (c) { cmp.b = c.commit; cmpUrl(); renderCompare(); }
+      var c = list[Math.max(0, list.map(function (x) { return x.commit; }).indexOf(cmp.b)) + 1];
+      if (c) { cmp.a = c.commit; cmpUrl(); renderCompare(); }
     });
     quick.appendChild(prev);
     bar.appendChild(quick);
@@ -884,9 +929,9 @@
     var ca = list.filter(function (c) { return c.commit === cmp.a; })[0], cb = list.filter(function (c) { return c.commit === cmp.b; })[0];
     if (!ca || !cb) return;
     var info = el("p", { class: "muted small" });
-    info.innerHTML = 'A: <a href="' + REPO + "/commit/" + esc(ca.commit_full) + '"><code>' + esc(short(ca.commit)) + "</code></a> " + esc(cdate(ca)) + (ctag(ca) ? " " + esc(ctag(ca)) : "") +
-      ' &nbsp; B: <a href="' + REPO + "/commit/" + esc(cb.commit_full) + '"><code>' + esc(short(cb.commit)) + "</code></a> " + esc(cdate(cb)) + (ctag(cb) ? " " + esc(ctag(cb)) : "") +
-      ' &nbsp; <a href="' + REPO + "/compare/" + esc(cb.commit_full) + "..." + esc(ca.commit_full) + '">upstream changes between them</a>';
+    info.innerHTML = 'A (before): <a href="' + REPO + "/commit/" + esc(ca.commit_full) + '"><code>' + esc(short(ca.commit)) + "</code></a> " + esc(cdate(ca)) + (ctag(ca) ? " " + esc(ctag(ca)) : "") +
+      ' &nbsp; B (after): <a href="' + REPO + "/commit/" + esc(cb.commit_full) + '"><code>' + esc(short(cb.commit)) + "</code></a> " + esc(cdate(cb)) + (ctag(cb) ? " " + esc(ctag(cb)) : "") +
+      ' &nbsp; <a href="' + REPO + "/compare/" + esc(ca.commit_full) + "..." + esc(cb.commit_full) + '">upstream changes between them</a>';
     host.appendChild(info);
     if (ca.commit === cb.commit) host.appendChild(el("p", { class: "muted" }, "A and B are the same commit."));
 
@@ -927,8 +972,8 @@
           tr.appendChild(el("td", {}, vb.length ? fmt(median(vb)) : "n/a"));
           tr.appendChild(el("td", {}, "")); tr.appendChild(el("td", {}, ""));
         } else {
-          var x = median(va), y = median(vb), d = x - y;
-          var pct = y !== 0 ? d / y * 100 : null;
+          var x = median(va), y = median(vb), d = y - x;
+          var pct = x !== 0 ? d / x * 100 : null;
           var rd = Math.round(d * 10) / 10;
           var cls = Math.abs(pct == null ? d : pct) < 2 || rd === 0 ? "" : d < 0 ? "good" : "bad";
           tr.appendChild(el("td", {}, fmt(x)));

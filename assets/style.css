@@ -85,6 +85,17 @@ th{color:var(--muted);font-weight:600;font-size:.8rem}
 .scen-h{margin:0 0 .5rem;font-size:1.1rem}
 .scen-h .muted{font-weight:400;font-size:.92rem}
 .tl{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:12px 16px;margin:12px 0}
+.tl{padding:8px 14px;margin:8px 0}
+.tl[hidden]{display:none}
+.tl-sum{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;font-size:.92rem}
+.tl-sum .when,.tl-n{color:var(--muted);font-size:.85rem}
+.tl-m{white-space:nowrap}
+.tl-d{font-size:.82rem;font-weight:600}
+.tl-flat{color:var(--muted)}
+.tl-body{margin-top:8px}
+.tl-body table{font-size:.82rem}
+.tl-body th,.tl-body td{padding:3px 6px}
+.tl-more{display:block;margin:8px auto;font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 16px;cursor:pointer}
 .tl-head{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
 .tl-head .when{color:var(--muted);font-size:.9rem}
 .chip{display:inline-block;font-size:.8rem;border:1px solid var(--line);border-radius:999px;padding:1px 9px;margin:2px 4px 2px 0;background:var(--bg)}

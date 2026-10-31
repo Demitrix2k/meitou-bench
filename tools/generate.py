@@ -68,7 +68,7 @@ RES_RE = re.compile(r"^\d{3,5}x\d{3,5}$")
 HASH_RE = re.compile(r"^[0-9a-f]{7,40}$")
 RESULT_RE = re.compile(r"^(\d{4}-\d\d-\d\d)-([0-9a-f]{7,40})\.csv$")
 REPORT_RE = re.compile(r"^(\d{4}-\d\d-\d\d)-([0-9a-f]{7,40})\.report\.md$")
-KIT_NOTE_RE = re.compile(r"series \d+: \d+ runs per scenario \(run 1 may be cache-cold\); dev kit;?\s*")
+KIT_NOTE_RE = re.compile(r"series \d+: \d+ runs? per scenario(?: \(run 1 may be cache-cold\))?(?:; dev kit)?;?\s*")
 
 
 def git(repo, *args):
@@ -111,18 +111,59 @@ def bucket_of(subject, cfg):
     return best[1] if best else "Other"
 
 
+# Path rules, first match wins. Applied to every file a commit touches (git log --name-only on the upstream repo).
+PATH_RULES = [
+    (r"^(docs|news|site|assets)/|\.md$|^LICENSE", "Docs & research"),
+    (r"^tests/|(^|/)[^/]*Tests?\.cs$", "Tests"),
+    (r"^(launcher|services)/|^\.github/|^tools/(scripts|patches)/|\.csproj$|\.targets$|\.props$|^Directory\.|\.sln|\.slnx$|^THIRD_PARTY|^global\.json|\.sh$|\.yml$", "Launcher/build/platform"),
+    (r"^src/Meitou\.(Ui|Game/Ui)/|^src/Meitou\.(Rendering|Data)/Ui/|^src/Meitou\.Game/(PlayerInterface|Hud|Faithful)|^src/Meitou\.Game/[^/]*(Ui|Window|Panel|Menu|Tooltip)[^/]*\.cs$|GameHost\.(Title|DebugMenu|Loading|Inspector)\.", "UI"),
+    (r"^src/Meitou\.Rendering|^src/Meitou\.Data/(Ogre|Textures|Particles)/|\.(glsl|vert|frag|comp|slang|hlsl)$|(^|/)Shaders?/|GameHost\.(Debris|Blood|ItemIcons|Screenshot)\.|^src/Meitou\.Engine/Cameras/", "Rendering/graphics"),
+    (r"^tools/", "Launcher/build/platform"),
+    (r"^src/", "Gameplay & AI"),
+]
+PATH_RULES = [(re.compile(rx), b) for rx, b in PATH_RULES]
+WEAK = ("Docs & research", "Tests")   # lose to code buckets when a commit touches both
+
+
+def bucket_by_paths(paths):
+    """Bucket with the most touched files; docs/tests only count when nothing else was touched."""
+    counts = {}
+    for p in paths:
+        for rx, b in PATH_RULES:
+            if rx.search(p):
+                counts[b] = counts.get(b, 0) + 1
+                break
+    strong = {b: n for b, n in counts.items() if b not in WEAK}
+    pool = strong or counts
+    return pool, (max(pool.values()) if pool else 0)
+
+
+def classify(subject, paths, cfg):
+    """Performance by subject; otherwise by touched files; the subject prefix breaks ties and covers commits with no matching file."""
+    sb = bucket_of(subject, cfg)
+    if sb == "Performance":
+        return sb
+    pool, top = bucket_by_paths(paths)
+    if not pool:
+        return sb
+    tied = [b for b in cfg["buckets"] if pool.get(b) == top]
+    return sb if sb in tied else tied[0]
+
+
 MERGE_RE = re.compile(r"^Merge (?:PR|pull request) #?(\d+)(?::\s*(.*?))?(?:\s+from\s+\S+)?(?:\s+\(by ([^)]+)\))?$")
 
 
 def changes(repo, prev, cur, cfg):
     rng = prev + ".." + cur
-    out = git(repo, "log", "--no-merges", "--format=%H%x09%s", rng)
+    out = git(repo, "log", "--no-merges", "--name-only", "--format=%x01%H%x09%s", rng)
     if out is None:
         return None
     commits = []
-    for line in out.splitlines():
-        h, _, s = line.partition("\t")
-        commits.append({"hash": h, "short": h[:8], "subject": s, "bucket": bucket_of(s, cfg)})
+    for blk in out.split("\x01")[1:]:
+        lines = blk.split("\n")
+        h, _, s = lines[0].partition("\t")
+        paths = [l for l in lines[1:] if l.strip()]
+        commits.append({"hash": h, "short": h[:8], "subject": s, "bucket": classify(s, paths, cfg)})
     prs = []
     mout = git(repo, "log", "--merges", "--format=%H%x09%s", rng) or ""
     for line in mout.splitlines():

@@ -34,7 +34,7 @@
 
 <main class="wrap">
   <section id="headline-sec">
-    <h2>Latest master vs previous</h2>
+    <h2>Previous &rarr; latest master</h2>
     <div id="headline"></div>
   </section>
 
@@ -62,14 +62,15 @@
 
   <section class="box" id="compare-sec" hidden>
     <h2>Compare two commits</h2>
-    <p class="muted">Pick any two benchmarked commits. The selection is kept in the page address, so a comparison can be linked.</p>
+    <p class="muted">Pick any two benchmarked commits: A is the before, B the after, and Change = B minus A. The selection is kept in the page address, so a comparison can be linked.</p>
     <div id="compare"></div>
   </section>
 
   <section id="timeline-sec">
     <h2>Changes between benchmarks</h2>
     <p class="muted">Newest first. Summaries are taken from upstream commit messages only, not reviewed.
-    Areas are guessed from the part of the subject before the colon; anything unrecognised is listed as Other.</p>
+    Areas are taken from the files each commit changes (subject prefix only breaks ties).</p>
+    <p class="muted small" id="tl-legend"></p>
     <div id="timeline"></div>
   </section>
 
