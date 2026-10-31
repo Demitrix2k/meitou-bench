@@ -266,9 +266,9 @@ details.allm .cmp-h{font-size:.95rem}
 .tile:focus-within,.tl-sum:focus-visible,summary:focus-visible{border-radius:8px}
 tbody tr:focus-within{background:color-mix(in srgb,var(--accent) 12%,transparent)}
 @media (hover:hover){
-  tbody tr:hover>*{background:color-mix(in srgb,var(--accent) 14%,transparent)}
-  tbody tr:hover>td:first-child{color:var(--text);font-weight:700;box-shadow:inset 3px 0 0 var(--accent)}
-  tbody tr:hover>td:first-child *{font-weight:inherit}
+  tbody tr:hover>*{background:color-mix(in srgb,var(--accent) 20%,transparent)}
+  /* faux bold via text-shadow: real bold widens the text and reflows the columns */
+  tbody tr:hover>td:first-child{color:var(--text);text-shadow:.4px 0 0 currentColor;box-shadow:inset 3px 0 0 var(--accent)}
   .cov td:hover,.cmp td:hover{background:color-mix(in srgb,var(--accent) 26%,transparent)}
   .tile{transition:none;border-radius:10px}
   .tile:hover{background:color-mix(in srgb,var(--c) 12%,transparent);box-shadow:0 0 0 1px var(--c);transform:translateY(-2px)}
