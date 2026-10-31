@@ -222,6 +222,8 @@
         }
       });
     });
+    var guide = sv("line", { class: "guide", x1: 0, x2: 0, y1: m.t, y2: m.t + ph });
+    svg.appendChild(guide);
     lines.forEach(function (ln) {
       var col = mcolor(ln.m);
       ln.pts.forEach(function (p) {
@@ -238,12 +240,15 @@
           (state.relative ? " (" + fmt(p.shown) + "% of own baseline)" : "") +
           "<br>run " + p.r.run + ", " + esc(seriesName(p.r.series)) +
           (p.off ? "<br><i>off-target commit: not a benchmark target</i>" : "");
+        function gOn() { guide.setAttribute("x1", x); guide.setAttribute("x2", x); guide.classList.add("on"); }
+        function gOff() { guide.classList.remove("on"); }
+        hit.addEventListener("mouseenter", gOn);
         hit.addEventListener("mousemove", function (ev) { showTip(html, ev); });
-        hit.addEventListener("mouseleave", hideTip);
+        hit.addEventListener("mouseleave", function () { hideTip(); gOff(); });
         hit.addEventListener("focus", function () {
-          var b = hit.getBoundingClientRect(); showTip(html, { clientX: b.left, clientY: b.top });
+          gOn(); var b = hit.getBoundingClientRect(); showTip(html, { clientX: b.left, clientY: b.top });
         });
-        hit.addEventListener("blur", hideTip);
+        hit.addEventListener("blur", function () { hideTip(); gOff(); });
         var ti = sv("title");
         ti.textContent = (multi() ? mname(p.m) + " " : "") + short(p.c.commit) + " run " + p.r.run + ": " + fmt(p.v) + metric.unit;
         hit.appendChild(ti);

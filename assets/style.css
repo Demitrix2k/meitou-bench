@@ -258,3 +258,30 @@ details.allm .cmp-h{font-size:.95rem}
 .tl-body details.runs{margin:2px 0}
 .tl-body .small{margin:.2rem 0}
 @media (max-width:560px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.tile .d{font-size:1.25rem}.tile{padding-left:10px}.tiles{gap:6px}}
+
+/* Hover / focus feedback (visual only). Hover styles only where a real hover exists; focus-visible everywhere. */
+.chart .guide{stroke:var(--accent);stroke-width:1;stroke-dasharray:3 3;opacity:0;pointer-events:none}
+.chart .guide.on{opacity:.7}
+.chart .hit:focus-visible{outline:none;fill:color-mix(in srgb,var(--accent) 25%,transparent);stroke:var(--accent);stroke-width:2.5}
+.tile:focus-within,.tl-sum:focus-visible,summary:focus-visible{border-radius:8px}
+tbody tr:focus-within{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+@media (hover:hover){
+  tbody tr:hover>*{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+  tbody tr:hover>td:first-child{color:var(--text);font-weight:700;box-shadow:inset 3px 0 0 var(--accent)}
+  tbody tr:hover>td:first-child *{font-weight:inherit}
+  .cov td:hover,.cmp td:hover{background:color-mix(in srgb,var(--accent) 26%,transparent)}
+  .tile{transition:none;border-radius:10px}
+  .tile:hover{background:color-mix(in srgb,var(--c) 12%,transparent);box-shadow:0 0 0 1px var(--c);transform:translateY(-2px)}
+  summary:hover{background:color-mix(in srgb,var(--accent) 12%,transparent);border-radius:8px}
+  .tl:hover{border-color:var(--accent)}
+  .chart .hit:hover{fill:color-mix(in srgb,var(--accent) 25%,transparent);stroke:var(--accent);stroke-width:2.5}
+  .mcard:hover{border-color:var(--accent)}
+  .bdchip:hover,.cmp-quick button:hover,.tl-more:hover{border-color:var(--accent)}
+}
+.tile:focus-within{box-shadow:0 0 0 1px var(--c)}
+summary:focus-visible{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+@media (prefers-reduced-motion:no-preference){
+  tbody tr>*,summary,.tile,.tl{transition:background-color .12s ease,box-shadow .12s ease,transform .12s ease,border-color .12s ease}
+  .chart .guide{transition:opacity .1s ease}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
