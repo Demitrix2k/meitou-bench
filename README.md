@@ -1,13 +1,19 @@
+> **This repository is retired (2026-11-01).** Benchmarks, results and the target list now live in upstream's
+> [`bench/`](https://github.com/VlcekM/MeitouClient/tree/master/bench) directory (VlcekM/MeitouClient), and the page is
+> https://meitou.kenshi.wiki/benchmarks/. To contribute results, follow
+> [`bench/CONTRIBUTING.md`](https://github.com/VlcekM/MeitouClient/blob/master/bench/CONTRIBUTING.md) and open the pull request
+> against VlcekM/MeitouClient, not here. This repository is kept as history only; the text below describes how it worked and is no longer maintained.
+
 # Meitou benchmarks
 
-**Website: https://demitrix2k.github.io/meitou-bench/** (charts per commit, machines, and what changed upstream between benchmarks)
+~~Website: https://demitrix2k.github.io/meitou-bench/~~ (old page; use https://meitou.kenshi.wiki/benchmarks/)
 
 The public home for Meitou benchmarks from several machines. Meitou is a C#/.NET Vulkan reimplementation of the game
 Kenshi ([upstream](https://github.com/VlcekM/MeitouClient)). This repository holds three things:
 
 - `kit/`: the dev kit (Python 3.10+, Linux, Windows and macOS). Reproduces the fixed benchmark on your own machine (see `kit/README.md`). Linux native is the platform the maintainer measures on; Windows and macOS are supported by the kit but untested.
 - `data/`: results. `data/machines/<id>.json` describes a machine, `data/results/<id>/` holds its result CSVs.
-  Contributors add their own files by pull request (see `CONTRIBUTING.md`).
+  Contributors added their own files by pull request (now: to upstream, see the notice above).
 - the page: `index.html`, `assets/`, built from the data by `tools/generate.py`. It shows, per machine, trend charts per
   benchmarked upstream commit, comparisons between machines, a coverage matrix of machines against targets, and a summary of
   upstream changes between benchmarked commits.
@@ -95,16 +101,7 @@ Invalid input prints every problem and exits non-zero. Off-target commits print 
 
 ## For the maintainer
 
-After an upstream update and a benchmark run:
-
-```
-tools/refresh.sh [--push] <daily-bench.csv> <path to an updated MeitouClient clone>
-```
-
-It copies the maintainer CSV to `data/results/rtx3070-laptop-linux/daily-bench.csv`, replaces `targets.json` with a copy of upstream's
-`bench/targets.json` (from `origin/master` of the clone), validates, and commits both. It never touches the upstream clone and
-only pushes with `--push`. The target list is owned by upstream (its `bench-target` workflow adds the first nightly of each day
-and releases); do not edit `targets.json` here, it is overwritten on the next refresh.
+Retired: `tools/refresh.sh` is no longer run. Upstream owns `bench/targets.json` and the results.
 
 ## License
 

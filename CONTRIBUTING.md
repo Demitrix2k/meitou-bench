@@ -1,3 +1,5 @@
+> **Retired (2026-11-01):** contribute results to VlcekM/MeitouClient instead; see [bench/CONTRIBUTING.md](https://github.com/VlcekM/MeitouClient/blob/master/bench/CONTRIBUTING.md). The text below is history.
+
 # Contributing benchmark results
 
 Results from other machines are welcome. They are added by pull request and appear on the page next to the maintainer's, with your GitHub handle and your hardware.

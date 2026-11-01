@@ -1,3 +1,5 @@
+> **Retired repository (2026-11-01):** the kit now lives in [VlcekM/MeitouClient `bench/kit`](https://github.com/VlcekM/MeitouClient/tree/master/bench/kit); submit results there ([bench/CONTRIBUTING.md](https://github.com/VlcekM/MeitouClient/blob/master/bench/CONTRIBUTING.md)), not by pull request here.
+
 # Meitou benchmark dev kit
 
 Reproduce the Meitou daily benchmark on your own machine (Linux, Windows or macOS) and report in a common format, so numbers from different machines and commits can be compared.
