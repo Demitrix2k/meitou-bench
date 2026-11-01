@@ -3,7 +3,7 @@
 # Usage: tools/refresh.sh [--push] [csv] [repo]   (or set MEITOU_CSV, MEITOU_REPO)
 #   csv  = the maintainer's 19-column daily-bench.csv, copied to data/results/rtx3070-laptop-linux/daily-bench.csv
 #   repo = a clone of upstream MeitouClient, already updated (never touched by this script; its origin/master defines commit order)
-# A newer benchmarked commit that is not code-identical to the latest target is appended to targets.json as a daily target (it becomes the new standard).
+# targets.json is a copy of upstream's bench/targets.json from origin/master of the repo (upstream's workflow keeps it); it is overwritten on every run, never appended to locally.
 # data/bench.json is generated for local preview only and is not committed (CI builds it).
 # Pushes only with --push.
 set -eu
@@ -17,9 +17,16 @@ cd "$(dirname "$0")/.."
 if [ "$PUSH" = 1 ]; then git pull -q --rebase; fi
 DEST=data/results/rtx3070-laptop-linux/daily-bench.csv
 cp "$CSV" "$DEST"
-if ! python3 tools/generate.py --repo "$REPO" --append-targets; then
-  git checkout -q -- "$DEST" 2>/dev/null || true
-  echo "validation failed; $DEST restored" >&2
+restore() { git checkout -q -- "$DEST" targets.json 2>/dev/null || true; }
+if ! git -C "$REPO" show origin/master:bench/targets.json > targets.json.new 2>/dev/null || [ ! -s targets.json.new ]; then
+  rm -f targets.json.new; restore
+  echo "$REPO has no bench/targets.json on origin/master (fetch it first); nothing changed" >&2
+  exit 1
+fi
+mv targets.json.new targets.json
+if ! python3 tools/generate.py --repo "$REPO"; then
+  restore
+  echo "validation failed; $DEST and targets.json restored" >&2
   exit 1
 fi
 git add "$DEST" targets.json

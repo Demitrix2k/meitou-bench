@@ -16,7 +16,7 @@ import tempfile
 import urllib.request
 
 KIT = os.path.dirname(os.path.abspath(__file__))
-TARGETS_URL = os.environ.get("TARGETS_URL", "https://raw.githubusercontent.com/Demitrix2k/meitou-bench/main/targets.json")
+TARGETS_URL = os.environ.get("TARGETS_URL", "https://raw.githubusercontent.com/VlcekM/MeitouClient/master/bench/targets.json")
 SAVE_NAME = "bench-bases-2026-10-27"
 PLATFORMS = ("native", "proton", "windows", "macos")   # the values of the `platform` column; native = Linux native
 
@@ -117,7 +117,7 @@ def check_platform(plat, osname):
 
 # ---------------------------------------------------------------- benchmark targets
 def targets_json():
-    """The list in targets.json: the public copy first, then ../targets.json (offline, or before the public repository has it)."""
+    """The list in targets.json: upstream's bench/targets.json first (the authority), then ../targets.json (a copy of it, for offline use)."""
     try:
         with urllib.request.urlopen(TARGETS_URL, timeout=10) as r:
             t = json.loads(r.read().decode("utf-8"))

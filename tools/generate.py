@@ -398,8 +398,6 @@ def main():
     ap.add_argument("--repo", required=True, help="clone of the upstream repository")
     ap.add_argument("--ref", default="origin/master", help="upstream branch that defines commit order")
     ap.add_argument("--check", action="store_true", help="validate only, write nothing")
-    ap.add_argument("--append-targets", action="store_true",
-                    help="maintainer: add the maintainer's newer benchmarked commits to targets.json as daily targets (skips commits code-identical to the latest target)")
     ap.add_argument("--data", default=os.path.join(ROOT, "data"))
     ap.add_argument("--targets", default=os.path.join(ROOT, "targets.json"))
     ap.add_argument("--config", default=os.path.join(ROOT, "series.json"))
@@ -491,25 +489,6 @@ def main():
             warnings.append("machine %s has no results yet; it is not shown on the page" % mid)
     if maint not in machines:
         errors.append("maintainer machine %s (series.json) has no data/machines/%s.json" % (maint, maint))
-
-    if a.append_targets and not a.check and targets:
-        added = []
-        last_pos = max(position[t["commit_full"]] for t in targets)
-        mine = sorted({r["commit_full"] for r in rows if r["machine"] == maint}, key=lambda h: position[h])
-        for h in mine:
-            if position[h] <= last_pos or code_identical(a.repo, (targets + added)[-1]["commit_full"], h):
-                continue
-            first = min((r for r in rows if r["commit_full"] == h and r["machine"] == maint), key=lambda r: (r["date"], r["time"]))
-            label = "daily " + first["date"]
-            n = sum(1 for t in targets + added if t["label"].startswith(label))
-            if n:
-                label += " (%d)" % (n + 1)
-            added.append({"commit": short[h], "commit_full": h, "date": first["date"], "label": label, "kind": "daily", "note": ""})
-        if added:
-            targets.extend(added)
-            with open(a.targets, "w", encoding="utf-8") as f:
-                f.write("[\n" + ",\n".join("  " + json.dumps({k: t[k] for k in ("commit", "date", "label", "kind", "note")}, ensure_ascii=False) for t in targets) + "\n]\n")
-            print("targets.json: added %s" % ", ".join(t["commit"] for t in added))
 
     # which target does each benchmarked commit count for? (itself, or a code-identical target)
     target_of = {}

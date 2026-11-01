@@ -79,7 +79,7 @@ python3 verify_save.py "$KENSHI_PATH/save/bench-bases-2026-10-27"
 
    The checksum of `save-checksums.sha256` itself, which goes into your report: `ceb2fb186fcfce7d3841a947914eac89f37547b028fbf05fb760aa8613dac4ff`. The script never writes into the save: it copies it into the output folder and the game loads the copy.
 
-4. **Build the current benchmark target** for your machine. Everyone benchmarks the same commits: `build.py` reads `targets.json` (the latest entry is the current standard; from the public repository, or `../targets.json` when offline) and builds that commit. `REF=origin/master` or any other commit still works but prints a warning: the result is then off-target (accepted, but flagged and left out of cross-machine comparisons). `bench.py` says in its output and report whether the commit is a target. The first run clones `https://github.com/VlcekM/MeitouClient.git` into `./MeitouClient`; later runs fetch. Your own working tree is never touched.
+4. **Build the current benchmark target** for your machine. Everyone benchmarks the same commits: `build.py` reads `targets.json` (the latest entry is the current standard; from upstream's `bench/targets.json` on GitHub, or `../targets.json` when offline) and builds that commit. `REF=origin/master` or any other commit still works but prints a warning: the result is then off-target (accepted, but flagged and left out of cross-machine comparisons). `bench.py` says in its output and report whether the commit is a target. The first run clones `https://github.com/VlcekM/MeitouClient.git` into `./MeitouClient`; later runs fetch. Your own working tree is never touched.
 
 ```bash
 python3 build.py

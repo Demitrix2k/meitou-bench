@@ -6,9 +6,9 @@ Results from other machines are welcome. They are added by pull request and appe
 
 `targets.json` lists the benchmark targets, oldest first. **The latest entry is the current standard**: run that commit. Comparing machines only makes sense on the same code.
 
-- **Run the latest target.** The dev kit builds it by default: `build.py` reads `targets.json` (from the public repository, or the copy next to the kit when offline) and builds that commit.
+- **Run the latest target.** The dev kit builds it by default: `build.py` reads `targets.json` (from upstream's bench/targets.json, or the copy next to the kit when offline) and builds that commit.
 - **Release targets** (`kind: release`, for example `v0.16.0`) are anchor points: every machine should run each release at least once, so any two machines have a commit in common.
-- **Daily targets** are added by the maintainer after each upstream update (`tools/refresh.sh`). You do not need to chase every one; the latest is enough.
+- **Daily targets** are added by upstream's workflow (`bench/targets.json` in VlcekM/MeitouClient); this repository only mirrors that list (`tools/refresh.sh`). You do not need to chase every one; the latest is enough.
 - A commit that differs from a target only in `docs/`, `site/`, `tests/`, `.github/`, `tools/` or `*.md` is **code-identical** and counts for that target.
 - Any other commit on upstream `master` is accepted but flagged **off-target**: it is drawn faded on the page and left out of comparisons between machines. Setting `REF=...` when building makes your result off-target (the kit prints a warning).
 

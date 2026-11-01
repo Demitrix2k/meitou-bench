@@ -16,7 +16,7 @@ Not affiliated with Lo-Fi Games or Kenshi's makers. Meitou is a separate project
 
 ## The standard
 
-`targets.json` is the ordered list of benchmark targets (commit, date, label, kind `release` or `daily`). The latest entry is the
+`targets.json` (a copy of upstream's `bench/targets.json`) is the ordered list of benchmark targets (commit, date, label, kind `release` or `daily`). The latest entry is the
 current standard: everyone benchmarks it, so numbers from different machines are comparable. Release targets (e.g. `v0.16.0`) are
 anchor points every machine should run at least once. A commit that differs from a target only in `docs/`, `site/`, `tests/`,
 `.github/`, `tools/` or `*.md` is code-identical and counts for it; any other commit is accepted but flagged off-target (faded on
@@ -101,10 +101,10 @@ After an upstream update and a benchmark run:
 tools/refresh.sh [--push] <daily-bench.csv> <path to an updated MeitouClient clone>
 ```
 
-It copies the maintainer CSV to `data/results/rtx3070-laptop-linux/daily-bench.csv`, validates, appends a new daily target to
-`targets.json` when the newly benchmarked commit is not code-identical to the latest target (it becomes the new standard),
-and commits both. It never touches the upstream clone and only pushes with `--push`. Release targets are added to `targets.json`
-by hand (kind `release`, label = the upstream tag; the generator checks the tag against the commit).
+It copies the maintainer CSV to `data/results/rtx3070-laptop-linux/daily-bench.csv`, replaces `targets.json` with a copy of upstream's
+`bench/targets.json` (from `origin/master` of the clone), validates, and commits both. It never touches the upstream clone and
+only pushes with `--push`. The target list is owned by upstream (its `bench-target` workflow adds the first nightly of each day
+and releases); do not edit `targets.json` here, it is overwritten on the next refresh.
 
 ## License
 
